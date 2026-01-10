@@ -1,0 +1,11 @@
+{
+  "tickets": [
+    {
+      "id": 1,
+      "title": "Example ticket - delete me",
+      "description": "This is an example ticket. Replace with your actual tasks.",
+      "passes": false,
+      "priority": 1
+    }
+  ]
+}

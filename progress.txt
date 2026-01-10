@@ -1,0 +1,6 @@
+# Ralph Progress Log
+
+Append-only log of completed work. Each iteration adds to this file.
+
+---
+
