@@ -2,21 +2,15 @@
 
 # Build the docker image
 build:
-    docker build -t ralph .
+    ./bin/ralph-build
 
 # Run loop mode (all tickets until done)
 loop *args:
-    docker run -it \
-        -v $(pwd):/workspace \
-        -v ~/.claude:/root/.claude:ro \
-        ralph /ralph/ralph-loop.sh {{args}}
+    ./bin/ralph {{args}}
 
 # Run once mode (one ticket, then stop)
 once:
-    docker run -it \
-        -v $(pwd):/workspace \
-        -v ~/.claude:/root/.claude:ro \
-        ralph /ralph/ralph-once.sh
+    ./bin/ralph-once
 
 # Show remaining tickets
 tickets:

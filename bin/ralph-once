@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -e
+
+RALPH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+docker run -it \
+  -v "$(pwd)":/workspace \
+  -v ~/.claude:/root/.claude:ro \
+  -v "$RALPH_DIR/prompt.md":/ralph/prompt.md:ro \
+  ralph /ralph/ralph-once.sh

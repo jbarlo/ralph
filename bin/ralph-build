@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -e
+
+RALPH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+docker build -t ralph "$RALPH_DIR"
