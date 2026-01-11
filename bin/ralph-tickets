@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -e
+
+if [[ ! -f tickets.json ]]; then
+  echo "No tickets.json found."
+  exit 1
+fi
+
+MODE="${1:-pending}"
+
+case "$MODE" in
+  pending|p)
+    jq -r '.tickets[] | select(.passes == false) | "[\(.priority)] #\(.id): \(.title)" + (if .description != "" then "\n    " + .description else "" end)' tickets.json
+    ;;
+  done|d)
+    jq -r '.tickets[] | select(.passes == true) | "#\(.id): \(.title)"' tickets.json
+    ;;
+  all|a)
+    jq -r '.tickets[] | "[\(if .passes then "x" else " " end)] #\(.id): \(.title)"' tickets.json
+    ;;
+  *)
+    echo "Usage: ralph-tickets [pending|done|all]"
+    exit 1
+    ;;
+esac

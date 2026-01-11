@@ -16,20 +16,25 @@ loop *args:
 once:
     ./bin/ralph-once
 
+# Initialize ralph in current directory
+init:
+    ./bin/ralph-init
+
 # Show remaining tickets
 tickets:
-    @jq -r '.tickets[] | select(.passes == false) | "[\(.priority)] #\(.id): \(.title)" + (if .description != "" then "\n    " + .description else "" end)' tickets.json
+    @./bin/ralph-tickets pending
 
 # Show completed tickets
 done:
-    @jq -r '.tickets[] | select(.passes == true) | "#\(.id): \(.title)"' tickets.json
+    @./bin/ralph-tickets done
+
+# Show all tickets
+all:
+    @./bin/ralph-tickets all
 
 # Add a new ticket
 add title priority="10" description="":
-    @echo '{"id": '$(jq '[.tickets[].id] | max + 1' tickets.json)', "title": "{{title}}", "description": "{{description}}", "passes": false, "priority": {{priority}}}' | \
-        jq -s '.[0].tickets += [.[1]] | .[0]' tickets.json - > tickets.json.tmp && \
-        mv tickets.json.tmp tickets.json
-    @echo "Added ticket: {{title}}"
+    @./bin/ralph-add "{{title}}" "{{priority}}" "{{description}}"
 
 # Show progress log
 progress:

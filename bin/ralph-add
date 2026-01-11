@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -e
+
+TITLE="${1:?Usage: ralph-add \"title\" [priority] [description]}"
+PRIORITY="${2:-10}"
+DESCRIPTION="${3:-}"
+
+if [[ ! -f tickets.json ]]; then
+  echo "No tickets.json found. Run ralph-init first."
+  exit 1
+fi
+
+# Get next ID (handles empty tickets array)
+NEXT_ID=$(jq '[.tickets[].id] | if length == 0 then 1 else max + 1 end' tickets.json)
+
+# Add ticket
+jq --arg title "$TITLE" \
+   --arg desc "$DESCRIPTION" \
+   --argjson priority "$PRIORITY" \
+   --argjson id "$NEXT_ID" \
+   '.tickets += [{"id": $id, "title": $title, "description": $desc, "passes": false, "priority": $priority}]' \
+   tickets.json > tickets.json.tmp && mv tickets.json.tmp tickets.json
+
+echo "Added #$NEXT_ID: $TITLE (priority: $PRIORITY)"

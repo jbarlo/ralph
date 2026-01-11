@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+cat << 'EOF'
+RALPH - Autonomous coding agent loop
+
+Ralph runs Claude Code in a loop, completing tickets one at a time until done.
+Progress persists in files (tickets.json, progress.txt) and git history.
+
+SETUP
+  ralph-init                    Bootstrap current dir with tickets.json, CLAUDE.md, progress.txt
+  ralph-build                   Build the docker image (run once, or after updating ralph)
+
+TICKETS
+  ralph-add "title" [pri] [desc]  Add a ticket (priority default: 10, lower = higher priority)
+  ralph-tickets                   Show pending tickets
+  ralph-tickets done              Show completed tickets
+  ralph-tickets all               Show all tickets with status
+
+EXECUTION
+  ralph [max_iter]              Run loop until all tickets done (default: 20 iterations)
+  ralph-once                    Run one ticket, then stop
+
+HOW IT WORKS
+  1. Ralph reads tickets.json for incomplete tickets (passes: false)
+  2. Picks best ticket considering priority and dependencies
+  3. Works on it, runs tests/checks to verify
+  4. Marks ticket passes: true, appends to progress.txt
+  5. Git commits, exits. Loop starts next iteration.
+
+FILES (in your project)
+  tickets.json    Task list. Ralph updates passes flag when done.
+  CLAUDE.md       Project-specific instructions for the agent.
+  progress.txt    Append-only log of what ralph did each iteration.
+
+DOCKER MOUNTS
+  $(pwd):/workspace             Your project (read-write)
+  ~/.claude:/root/.claude:ro    Auth for Claude Code subscription (read-only)
+
+TIPS
+  - Keep tickets small and atomic
+  - Add project-specific test/build commands to CLAUDE.md
+  - Check git log for iteration checkpoints
+  - Use ralph-once to test before running full loop
+EOF
