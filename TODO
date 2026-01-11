@@ -1,0 +1,56 @@
+# Ralph Improvement Tasks
+
+Issues discovered during tabs project setup:
+
+## 1. ralph-init should scaffold a flake.nix
+
+Currently ralph-init creates tickets.json, CLAUDE.md, progress.txt but no flake.nix.
+Projects using nix need to manually create one and `git init && git add` it.
+
+Suggestion: ralph-init prompts for tech stack and generates appropriate flake.nix
+(or at minimum, creates a basic one with nodejs/common tools)
+
+## 2. Add status field to tickets.json
+
+Currently tickets only have `passes: boolean`. No visibility into which ticket
+ralph is actively working on.
+
+Proposed schema:
+```json
+{
+  "id": 1,
+  "title": "...",
+  "status": "pending" | "in_progress" | "completed" | "failed",
+  "passes": true
+}
+```
+
+ralph-loop.sh and prompt.md would need updates to:
+- Set status to "in_progress" when starting a ticket
+- Set status to "completed" or "failed" when done
+
+## 3. Update orchestrating CLAUDE.md guidance
+
+The CLAUDE.md that guides the human's Claude session (the one planning/creating tickets)
+should discourage jumping straight into writing code in the ralph project.
+
+Current workflow went: explore data -> plan tickets -> write tickets -> run ralph
+But we almost went down rabbit holes (IndexedDB extraction) before understanding the data.
+
+Suggested guidance:
+- Understand the data/problem space first
+- Reference actual sample data when writing ticket descriptions
+- Don't write implementation code - that's ralph's job
+- Validate ticket descriptions against real inputs before running ralph
+
+## 4. Pre-flight API validation
+
+Ralph should verify auth works before starting iterations.
+Currently fails mid-loop if credentials are wrong.
+
+## 5. TTY detection in scripts
+
+Scripts have `-it` but fail in non-TTY contexts (like running from Claude Code).
+Should detect and use `-i` only when no TTY available.
+
+## 6. Verify the project is in a git repo before running ralph or ralph-once

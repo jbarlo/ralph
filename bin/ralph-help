@@ -32,13 +32,20 @@ FILES (in your project)
   CLAUDE.md       Project-specific instructions for the agent.
   progress.txt    Append-only log of what ralph did each iteration.
 
+REQUIREMENTS
+  - Must run inside a git repository (ralph commits after each iteration)
+  - Docker must be running
+  - ~/.claude must have valid auth (run claude once manually to set up)
+
 DOCKER MOUNTS
   $(pwd):/workspace             Your project (read-write)
-  ~/.claude:/root/.claude:ro    Auth for Claude Code subscription (read-only)
+  ~/.claude temp copy           Auth for Claude Code subscription
+  ~/.gitconfig                  Git identity for commits
 
 TIPS
   - Keep tickets small and atomic
   - Add project-specific test/build commands to CLAUDE.md
   - Check git log for iteration checkpoints
   - Use ralph-once to test before running full loop
+  - Pre-flight auth check runs automatically before each session
 EOF

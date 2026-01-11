@@ -4,6 +4,12 @@ set -e
 RALPH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MAX_ITER="${1:-20}"
 
+# Check we're in a git repo
+if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+  echo "Error: ralph must run inside a git repository"
+  exit 1
+fi
+
 # Copy ~/.claude to temp dir so ralph can write session data without touching host
 CLAUDE_TMP=$(mktemp -d)
 trap "rm -rf $CLAUDE_TMP" EXIT
@@ -12,8 +18,25 @@ cp -r ~/.claude/. "$CLAUDE_TMP/" 2>/dev/null || true
 # Pre-create project dir for /workspace path to skip consent prompts
 mkdir -p "$CLAUDE_TMP/projects/-workspace"
 
-docker run -it \
+# TTY detection: use -it if interactive, -i otherwise
+DOCKER_FLAGS="-i"
+if [ -t 0 ]; then
+  DOCKER_FLAGS="-it"
+fi
+
+# Pre-flight: verify claude auth works
+echo "Verifying claude auth..."
+if ! docker run --rm $DOCKER_FLAGS \
+  -v "$CLAUDE_TMP":/home/ralph/.claude \
+  ralph claude --version &>/dev/null; then
+  echo "Error: claude auth check failed. Check your credentials."
+  exit 1
+fi
+echo "Auth OK. Starting ralph loop..."
+
+docker run $DOCKER_FLAGS \
   -v "$(pwd)":/workspace \
   -v "$CLAUDE_TMP":/home/ralph/.claude \
+  -v ~/.gitconfig:/home/ralph/.gitconfig:ro \
   -v "$RALPH_DIR/prompt.md":/ralph/prompt.md:ro \
   ralph /ralph/ralph-loop.sh "$MAX_ITER"
