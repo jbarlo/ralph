@@ -10,14 +10,14 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   echo ""
   echo "=== Iteration $i/$MAX_ITERATIONS ==="
 
-  # Check if all tickets done
-  if jq -e '[.tickets[] | select(.passes == false)] | length == 0' tickets.json > /dev/null 2>&1; then
+  # Check if all tickets done (no pending or in_progress)
+  if jq -e '[.tickets[] | select(.status == "pending" or .status == "in_progress")] | length == 0' tickets.json > /dev/null 2>&1; then
     echo "All tickets complete!"
     exit 0
   fi
 
   # Show remaining tickets
-  REMAINING=$(jq '[.tickets[] | select(.passes == false)] | length' tickets.json)
+  REMAINING=$(jq '[.tickets[] | select(.status == "pending" or .status == "in_progress")] | length' tickets.json)
   echo "Remaining tickets: $REMAINING"
 
   # Run claude

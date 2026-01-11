@@ -18,7 +18,7 @@ jq --arg title "$TITLE" \
    --arg desc "$DESCRIPTION" \
    --argjson priority "$PRIORITY" \
    --argjson id "$NEXT_ID" \
-   '.tickets += [{"id": $id, "title": $title, "description": $desc, "passes": false, "priority": $priority}]' \
+   '.tickets += [{"id": $id, "title": $title, "description": $desc, "status": "pending", "priority": $priority}]' \
    tickets.json > tickets.json.tmp && mv tickets.json.tmp tickets.json
 
 echo "Added #$NEXT_ID: $TITLE (priority: $PRIORITY)"

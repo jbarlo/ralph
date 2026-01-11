@@ -10,16 +10,19 @@ MODE="${1:-pending}"
 
 case "$MODE" in
   pending|p)
-    jq -r '.tickets[] | select(.passes == false) | "[\(.priority)] #\(.id): \(.title)" + (if .description != "" then "\n    " + .description else "" end)' tickets.json
+    jq -r '.tickets[] | select(.status == "pending" or .status == "in_progress") | "[\(.priority)] #\(.id): \(.title)" + (if .status == "in_progress" then " (in progress)" else "" end) + (if .description != "" then "\n    " + .description else "" end)' tickets.json
     ;;
   done|d)
-    jq -r '.tickets[] | select(.passes == true) | "#\(.id): \(.title)"' tickets.json
+    jq -r '.tickets[] | select(.status == "completed") | "#\(.id): \(.title)"' tickets.json
+    ;;
+  failed|f)
+    jq -r '.tickets[] | select(.status == "failed") | "#\(.id): \(.title)"' tickets.json
     ;;
   all|a)
-    jq -r '.tickets[] | "[\(if .passes then "x" else " " end)] #\(.id): \(.title)"' tickets.json
+    jq -r '.tickets[] | "[\(.status | .[0:1])] #\(.id): \(.title)"' tickets.json
     ;;
   *)
-    echo "Usage: ralph-tickets [pending|done|all]"
+    echo "Usage: ralph-tickets [pending|done|failed|all]"
     exit 1
     ;;
 esac

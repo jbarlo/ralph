@@ -9,6 +9,36 @@ else
   echo "Created tickets.json"
 fi
 
+# flake.nix - basic nix development environment
+if [[ -f flake.nix ]]; then
+  echo "flake.nix already exists"
+else
+  cat > flake.nix << 'EOF'
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
+  };
+
+  outputs = { self, nixpkgs, flake-utils }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = import nixpkgs { inherit system; };
+      in {
+        devShells.default = pkgs.mkShell {
+          packages = with pkgs; [
+            nodejs_22
+            pnpm
+            git
+            jq
+          ];
+        };
+      });
+}
+EOF
+  echo "Created flake.nix"
+fi
+
 # RALPH.md - instructions for the ralph executor
 if [[ -f RALPH.md ]]; then
   echo "RALPH.md already exists"
@@ -34,10 +64,15 @@ You are ralph, an autonomous coding agent. Complete ONE ticket per iteration.
   "id": 1,
   "title": "Short title",
   "description": "Detailed description of what to do",
-  "passes": false,
+  "status": "pending",
   "priority": 1
 }
 ```
+
+Status values: pending | in_progress | completed | failed
+
+When starting a ticket, set status to "in_progress".
+When done, set status to "completed" (or "failed" if unable to complete).
 
 ## Progress Log
 
