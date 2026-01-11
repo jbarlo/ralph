@@ -4,8 +4,16 @@ set -e
 RALPH_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MAX_ITER="${1:-20}"
 
+# Copy ~/.claude to temp dir so ralph can write session data without touching host
+CLAUDE_TMP=$(mktemp -d)
+trap "rm -rf $CLAUDE_TMP" EXIT
+cp -r ~/.claude/. "$CLAUDE_TMP/" 2>/dev/null || true
+
+# Pre-create project dir for /workspace path to skip consent prompts
+mkdir -p "$CLAUDE_TMP/projects/-workspace"
+
 docker run -it \
   -v "$(pwd)":/workspace \
-  -v ~/.claude:/root/.claude:ro \
+  -v "$CLAUDE_TMP":/home/ralph/.claude \
   -v "$RALPH_DIR/prompt.md":/ralph/prompt.md:ro \
   ralph /ralph/ralph-loop.sh "$MAX_ITER"
