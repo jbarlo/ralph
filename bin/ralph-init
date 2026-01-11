@@ -9,17 +9,18 @@ else
   echo "Created tickets.json"
 fi
 
-if [[ -f CLAUDE.md ]]; then
-  echo "CLAUDE.md already exists"
+# RALPH.md - instructions for the ralph executor
+if [[ -f RALPH.md ]]; then
+  echo "RALPH.md already exists"
 else
-  cat > CLAUDE.md << 'EOF'
-# Project Instructions
+  cat > RALPH.md << 'EOF'
+# Ralph Executor Instructions
 
-This is a Ralph Loop project. The agent runs in iterations, completing one ticket at a time.
+You are ralph, an autonomous coding agent. Complete ONE ticket per iteration.
 
 ## Workflow
 
-1. Check `tickets.json` for the highest priority incomplete ticket
+1. Read `tickets.json`, pick best incomplete ticket (priority is a hint, consider dependencies)
 2. Complete the ticket
 3. Verify with tests/type checks if applicable
 4. Mark ticket as `passes: true` in tickets.json
@@ -38,9 +39,6 @@ This is a Ralph Loop project. The agent runs in iterations, completing one ticke
 }
 ```
 
-- Lower priority number = higher priority (do first)
-- Set `passes: true` only after verified complete
-
 ## Progress Log
 
 Append to progress.txt after each ticket:
@@ -53,11 +51,52 @@ Append to progress.txt after each ticket:
 
 ## Project-Specific Notes
 
-Add your project-specific instructions here:
+Add project-specific instructions here:
 - Tech stack
 - Testing commands
 - Code conventions
-- etc.
+EOF
+  echo "Created RALPH.md"
+fi
+
+# CLAUDE.md - instructions for the orchestrator (human's Claude session)
+if [[ -f CLAUDE.md ]]; then
+  echo "CLAUDE.md already exists"
+else
+  cat > CLAUDE.md << 'EOF'
+# Orchestrator Instructions
+
+This is a Ralph Loop project. You are the orchestrator — your job is to PLAN, not execute.
+
+## Your Role
+
+- Understand the problem/codebase
+- Break work into small, atomic tickets
+- Write clear ticket descriptions with acceptance criteria
+- Let ralph (the executor) do the implementation
+
+## Guidelines
+
+- Explore and understand before planning
+- Reference actual code/data when writing tickets
+- Don't write implementation code — that's ralph's job
+- Keep tickets small (one clear task each)
+- Include test/verification steps in descriptions
+
+## Commands
+
+```bash
+ralph-add "title" [priority] [description]   # add ticket
+ralph-tickets                                 # view pending
+ralph-once                                    # run one ticket (test)
+ralph                                         # run all tickets
+```
+
+## Files
+
+- tickets.json: task queue (edit directly or use ralph-add)
+- RALPH.md: instructions for the executor (edit for project-specific guidance)
+- progress.txt: log of completed work
 EOF
   echo "Created CLAUDE.md"
 fi

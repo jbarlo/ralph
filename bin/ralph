@@ -36,6 +36,7 @@ echo "Auth OK. Starting ralph loop..."
 
 docker run $DOCKER_FLAGS \
   -v "$(pwd)":/workspace \
+  -v "$(pwd)/RALPH.md":/workspace/CLAUDE.md:ro \
   -v "$CLAUDE_TMP":/home/ralph/.claude \
   -v ~/.gitconfig:/home/ralph/.gitconfig:ro \
   -v "$RALPH_DIR/prompt.md":/ralph/prompt.md:ro \

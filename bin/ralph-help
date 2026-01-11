@@ -29,7 +29,8 @@ HOW IT WORKS
 
 FILES (in your project)
   tickets.json    Task list. Ralph updates passes flag when done.
-  CLAUDE.md       Project-specific instructions for the agent.
+  RALPH.md        Instructions for ralph (executor). Mounted as CLAUDE.md in container.
+  CLAUDE.md       Instructions for you (orchestrator/planner).
   progress.txt    Append-only log of what ralph did each iteration.
 
 REQUIREMENTS
