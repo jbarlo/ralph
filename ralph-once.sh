@@ -8,6 +8,7 @@ cd /workspace
 
 # Run claude for one ticket
 claude --print "$(cat /ralph/prompt.md)" \
+  --dangerously-skip-permissions \
   --allowedTools "Bash,Read,Write,Edit,Glob,Grep"
 
 # Checkpoint

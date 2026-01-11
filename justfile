@@ -1,5 +1,9 @@
 # Ralph Loop Commands
 
+# List available commands
+default:
+    @just --list
+
 # Build the docker image
 build:
     ./bin/ralph-build
@@ -14,15 +18,15 @@ once:
 
 # Show remaining tickets
 tickets:
-    jq '.tickets[] | select(.passes == false) | {id, title, priority}' tickets.json
+    @jq -r '.tickets[] | select(.passes == false) | "[\(.priority)] #\(.id): \(.title)" + (if .description != "" then "\n    " + .description else "" end)' tickets.json
 
 # Show completed tickets
 done:
-    jq '.tickets[] | select(.passes == true) | {id, title}' tickets.json
+    @jq -r '.tickets[] | select(.passes == true) | "#\(.id): \(.title)"' tickets.json
 
-# Add a new ticket (interactive)
-add title priority="10":
-    @echo '{"id": '$(jq '[.tickets[].id] | max + 1' tickets.json)', "title": "{{title}}", "description": "", "passes": false, "priority": {{priority}}}' | \
+# Add a new ticket
+add title priority="10" description="":
+    @echo '{"id": '$(jq '[.tickets[].id] | max + 1' tickets.json)', "title": "{{title}}", "description": "{{description}}", "passes": false, "priority": {{priority}}}' | \
         jq -s '.[0].tickets += [.[1]] | .[0]' tickets.json - > tickets.json.tmp && \
         mv tickets.json.tmp tickets.json
     @echo "Added ticket: {{title}}"
