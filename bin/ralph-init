@@ -90,6 +90,16 @@ Add project-specific instructions here:
 - Tech stack
 - Testing commands
 - Code conventions
+
+## Commits
+
+Use conventional commits:
+- `feat: ...` - new feature
+- `fix: ...` - bug fix
+- `refactor: ...` - code change (no new feature or fix)
+- `docs: ...` - documentation only
+- `test: ...` - adding/updating tests
+- `chore: ...` - maintenance, deps, config
 EOF
   echo "Created RALPH.md"
 fi

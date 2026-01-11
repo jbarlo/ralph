@@ -43,3 +43,13 @@ Add your project-specific instructions here:
 - Testing commands
 - Code conventions
 - etc.
+
+## Commits
+
+Use conventional commits:
+- `feat: ...` - new feature
+- `fix: ...` - bug fix
+- `refactor: ...` - code change (no new feature or fix)
+- `docs: ...` - documentation only
+- `test: ...` - adding/updating tests
+- `chore: ...` - maintenance, deps, config
