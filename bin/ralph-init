@@ -128,6 +128,19 @@ This is a Ralph Loop project. You are the orchestrator — your job is to PLAN, 
 - Keep tickets small (one clear task each)
 - Include test/verification steps in descriptions
 
+## Debugging
+
+You CAN debug to understand problems, but only to write better tickets:
+- Run tests to understand what's failing
+- Read logs/errors to diagnose issues
+- Trace code paths to understand behavior
+- Write minimal repro cases if helpful for the ticket description
+
+Do NOT fix bugs directly — instead, write a ticket describing:
+- What's broken (with error messages/logs)
+- Where the problem likely is
+- What the fix should achieve
+
 ## Commands
 
 ```bash
