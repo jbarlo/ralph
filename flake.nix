@@ -14,6 +14,7 @@
             nodejs_22
             git
             jq
+            just
             # claude-code installed via npm in shellHook
           ];
 
