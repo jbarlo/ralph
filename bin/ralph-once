@@ -33,7 +33,18 @@ if ! docker run --rm $DOCKER_FLAGS \
 fi
 echo "Auth OK. Running one ticket..."
 
-docker run $DOCKER_FLAGS \
+# Clean up any exited ralph container
+if docker ps -a --filter "status=exited" --format '{{.Names}}' | grep -q '^ralph$'; then
+  docker rm ralph >/dev/null
+fi
+
+# Check for running container
+if docker ps --format '{{.Names}}' | grep -q '^ralph$'; then
+  echo "Error: Container 'ralph' is already running. Run 'ralph-stop' to stop it."
+  exit 1
+fi
+
+docker run --name ralph $DOCKER_FLAGS \
   -v "$(pwd)":/workspace \
   -v "$(pwd)/RALPH.md":/workspace/CLAUDE.md:ro \
   -v "$CLAUDE_TMP":/home/ralph/.claude \
