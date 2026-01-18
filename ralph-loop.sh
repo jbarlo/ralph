@@ -23,7 +23,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   # Run claude
   claude --print "$(cat /ralph/prompt.md)" \
     --dangerously-skip-permissions \
-    --allowedTools "Bash,Read,Write,Edit,Glob,Grep"
+    --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch,Task"
 
   # Checkpoint
   git add -A && git commit -m "ralph iteration $i" || true
