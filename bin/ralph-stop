@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Stop and remove the ralph container
+
+if docker ps -a --format '{{.Names}}' | grep -q '^ralph$'; then
+  echo "Stopping ralph container..."
+  docker rm -f ralph
+  echo "Done."
+else
+  echo "No ralph container found."
+fi
