@@ -41,3 +41,13 @@ Append-only log of completed work. Each iteration adds to this file.
 - Files changed: bin/ralph, bin/ralph-once
 - Tests: verified bash syntax, tested jq/awk commands, tested hook invocation with ralph-hooks
 
+## Ticket #5: Implement on-error hook
+- Added on-error hook call to bin/ralph and bin/ralph-once
+- Hook triggers when: docker exits non-zero OR ticket wasn't marked completed
+- Refactored hook logic to use if/elif for on-complete vs on-error (mutually exclusive)
+- JSON payload: {event: "error", ticket: <ticket-json>, exit_code: <code>, timestamp: <iso8601>}
+- Uses TICKET_AFTER if available, falls back to TICKET_BEFORE
+- Hook failures don't abort ralph (continues with || true)
+- Files changed: bin/ralph, bin/ralph-once
+- Tests: verified bash syntax, tested JSON payload generation, tested ralph-hooks invocation
+

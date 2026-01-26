@@ -32,7 +32,7 @@
       "id": 5,
       "title": "Implement on-error hook",
       "description": "Modify bin/ralph and bin/ralph-once to call 'ralph-hooks on-error' on host when docker exits non-zero or ticket completion cannot be detected. Payload: {\"event\": \"error\", \"ticket\": <ticket-json>, \"exit_code\": <code>, \"timestamp\": <iso8601>}. Runs on host so hooks can access host tools. Depends on ticket #2.",
-      "status": "pending",
+      "status": "completed",
       "priority": 10
     },
     {
