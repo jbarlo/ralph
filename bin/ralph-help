@@ -70,10 +70,10 @@ HOOKS
       {"event": "start", "ticket": {...}, "timestamp": "<iso8601>"}
 
     on-complete:
-      {"event": "complete", "ticket": {...}, "summary": "<progress entry>", "timestamp": "<iso8601>"}
+      {"event": "complete", "ticket": {...}, "summary": "<progress entry>", "timestamp": "<iso8601>", "commit": "<hash>"}
 
     on-error:
-      {"event": "error", "ticket": {...}, "exit_code": <number>, "timestamp": "<iso8601>"}
+      {"event": "error", "ticket": {...}, "exit_code": <number>, "timestamp": "<iso8601>", "commit": "<hash>"}
 
   Use Cases:
     - Log completions to external system

@@ -6,6 +6,7 @@
     "ralph-once": "./bin/ralph-once",
     "ralph-stop": "./bin/ralph-stop",
     "ralph-add": "./bin/ralph-add",
-    "ralph-tickets": "./bin/ralph-tickets"
+    "ralph-tickets": "./bin/ralph-tickets",
+    "ralph-hooks": "./bin/ralph-hooks"
   }
 }
