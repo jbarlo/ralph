@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -e
+
+usage() {
+  echo "Usage: ralph-hooks <event> [json-payload]"
+  echo ""
+  echo "Execute all hooks in hooks.d/<event>/ directory"
+  echo ""
+  echo "Events: on-start, on-complete, on-error"
+  echo ""
+  echo "JSON payload is passed via:"
+  echo "  - stdin (piped to each hook)"
+  echo "  - RALPH_HOOK_CONTEXT env var"
+  echo "  - RALPH_HOOK_EVENT env var (event name)"
+  exit 1
+}
+
+if [[ -z "$1" || "$1" == "-h" || "$1" == "--help" ]]; then
+  usage
+fi
+
+EVENT="$1"
+JSON_PAYLOAD="${2:-{}}"
+HOOKS_DIR="hooks.d/$EVENT"
+
+if [[ ! -d "$HOOKS_DIR" ]]; then
+  exit 0
+fi
+
+FAILED_HOOKS=()
+
+# Find all executable files in hooks.d/<event>/, sorted lexicographically
+while IFS= read -r -d '' hook; do
+  if [[ -x "$hook" ]]; then
+    hook_name=$(basename "$hook")
+    echo "Running hook: $hook_name"
+
+    export RALPH_HOOK_EVENT="$EVENT"
+    export RALPH_HOOK_CONTEXT="$JSON_PAYLOAD"
+    if ! echo "$JSON_PAYLOAD" | "$hook"; then
+      echo "Hook failed: $hook_name"
+      FAILED_HOOKS+=("$hook_name")
+    fi
+  fi
+done < <(find "$HOOKS_DIR" -maxdepth 1 -type f -print0 | sort -z)
+
+if [[ ${#FAILED_HOOKS[@]} -gt 0 ]]; then
+  echo ""
+  echo "Hook errors:"
+  for h in "${FAILED_HOOKS[@]}"; do
+    echo "  - $h"
+  done
+  exit 1
+fi

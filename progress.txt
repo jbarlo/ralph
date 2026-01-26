@@ -11,3 +11,13 @@ Append-only log of completed work. Each iteration adds to this file.
 - Files changed: bin/ralph-init
 - Tests: verified directory structure created correctly, verified idempotence
 
+## Ticket #2: Create ralph-hooks executor script
+- Created bin/ralph-hooks script to execute lifecycle hooks
+- Finds all executable files in hooks.d/<event>/ directory
+- Executes hooks in lexicographic order (01-first, 02-second, etc.)
+- Passes JSON context via stdin, RALPH_HOOK_EVENT, and RALPH_HOOK_CONTEXT env vars
+- Continues on failure, collects errors, reports at end
+- Exits 0 if no hooks or all succeed, exits 1 if any fail
+- Files changed: bin/ralph-hooks (new)
+- Tests: verified with test hooks for success, failure, and continuation behavior
+
