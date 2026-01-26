@@ -90,6 +90,9 @@ if [[ -n "$TICKET_ID_BEFORE" ]]; then
   TICKET_STATUS=$(echo "$TICKET_AFTER" | jq -r '.status // empty')
 fi
 
+# Get current commit hash for hook context
+COMMIT_HASH=$(git rev-parse HEAD 2>/dev/null || echo "")
+
 # Run on-complete hook if docker exited successfully and ticket was completed
 if [[ $DOCKER_EXIT -eq 0 && -d "hooks.d/on-complete" && "$TICKET_STATUS" == "completed" ]]; then
   # Extract last progress.txt entry
@@ -99,15 +102,15 @@ if [[ $DOCKER_EXIT -eq 0 && -d "hooks.d/on-complete" && "$TICKET_STATUS" == "com
   fi
 
   TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  PAYLOAD=$(jq -n --argjson ticket "$TICKET_AFTER" --arg summary "$SUMMARY" --arg ts "$TIMESTAMP" \
-    '{event: "complete", ticket: $ticket, summary: $summary, timestamp: $ts}')
+  PAYLOAD=$(jq -n --argjson ticket "$TICKET_AFTER" --arg summary "$SUMMARY" --arg ts "$TIMESTAMP" --arg commit "$COMMIT_HASH" \
+    '{event: "complete", ticket: $ticket, summary: $summary, timestamp: $ts, commit: $commit}')
   "$RALPH_DIR/bin/ralph-hooks" on-complete "$PAYLOAD" || true
 
 # Run on-error hook if docker exited non-zero or ticket completion not detected
 elif [[ -d "hooks.d/on-error" && -n "$TICKET_ID_BEFORE" ]]; then
   TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  PAYLOAD=$(jq -n --argjson ticket "${TICKET_AFTER:-$TICKET_BEFORE}" --argjson exit_code "$DOCKER_EXIT" --arg ts "$TIMESTAMP" \
-    '{event: "error", ticket: $ticket, exit_code: $exit_code, timestamp: $ts}')
+  PAYLOAD=$(jq -n --argjson ticket "${TICKET_AFTER:-$TICKET_BEFORE}" --argjson exit_code "$DOCKER_EXIT" --arg ts "$TIMESTAMP" --arg commit "$COMMIT_HASH" \
+    '{event: "error", ticket: $ticket, exit_code: $exit_code, timestamp: $ts, commit: $commit}')
   "$RALPH_DIR/bin/ralph-hooks" on-error "$PAYLOAD" || true
 fi
 
