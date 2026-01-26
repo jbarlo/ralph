@@ -57,6 +57,13 @@
       "priority": 10
     },
     {
+      "id": 10,
+      "title": "Move iteration loop from container to host",
+      "description": "Refactor bin/ralph to handle the iteration loop on host instead of inside docker. Currently ralph-loop.sh runs multiple tickets inside one docker session, so hooks only fire once when docker exits. Change: 1) bin/ralph loops on host, calling docker once per ticket (like ralph-once does), 2) ralph-loop.sh becomes single-ticket (or removed, use ralph-once.sh), 3) Hooks fire after each ticket since docker exits each time. This ensures on-start/on-complete/on-error fire per-ticket. Preserve max_iter limit.",
+      "status": "completed",
+      "priority": 5
+    },
+    {
       "id": 9,
       "title": "Move ralph state to .ralph/ directory",
       "description": "Refactor to consolidate ralph state files into .ralph/ subdirectory. Move: tickets.json -> .ralph/tickets.json, progress.txt -> .ralph/progress.txt, hooks.d/ -> .ralph/hooks.d/. Keep RALPH.md at project root (visible project instructions). Update all ralph scripts to use new paths. Add fallback logic to check both locations for backwards compat. NOTE: Existing ralph projects will need manual migration - consider a ralph-migrate script or document manual steps.",

@@ -40,79 +40,100 @@ if ! docker run --rm $DOCKER_FLAGS \
   echo "Error: claude auth check failed. Check your credentials."
   exit 1
 fi
-echo "Auth OK. Starting ralph loop..."
+echo "Auth OK. Starting ralph loop (max $MAX_ITER iterations)..."
 
-# Run on-start hook (on host) with current ticket context
-if [[ -d "hooks.d/on-start" ]]; then
-  CURRENT_TICKET=$(jq -c '[.tickets[] | select(.status == "pending" or .status == "in_progress")] | sort_by(.priority) | first' tickets.json 2>/dev/null || echo '{}')
-  if [[ -z "$CURRENT_TICKET" || "$CURRENT_TICKET" == "null" ]]; then
-    CURRENT_TICKET='{}'
-  fi
-  TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  PAYLOAD=$(jq -n --argjson ticket "$CURRENT_TICKET" --arg ts "$TIMESTAMP" '{event: "start", ticket: $ticket, timestamp: $ts}')
-  "$RALPH_DIR/bin/ralph-hooks" on-start "$PAYLOAD" || true
-fi
+# Host-side iteration loop
+for i in $(seq 1 $MAX_ITER); do
+  echo ""
+  echo "=== Iteration $i/$MAX_ITER ==="
 
-# Clean up any exited ralph container
-if docker ps -a --filter "status=exited" --format '{{.Names}}' | grep -q '^ralph$'; then
-  docker rm ralph >/dev/null
-fi
-
-# Check for running container
-if docker ps --format '{{.Names}}' | grep -q '^ralph$'; then
-  echo "Error: Container 'ralph' is already running. Run 'ralph-stop' to stop it."
-  exit 1
-fi
-
-# Capture ticket state before docker run for comparison
-TICKET_BEFORE=$(jq -c '[.tickets[] | select(.status == "pending" or .status == "in_progress")] | sort_by(.priority) | first' tickets.json 2>/dev/null || echo '{}')
-if [[ -z "$TICKET_BEFORE" || "$TICKET_BEFORE" == "null" ]]; then
-  TICKET_BEFORE='{}'
-fi
-TICKET_ID_BEFORE=$(echo "$TICKET_BEFORE" | jq -r '.id // empty')
-
-# Run docker and capture exit code
-set +e
-docker run --name ralph $DOCKER_FLAGS \
-  -v "$(pwd)":/workspace \
-  -v "$(pwd)/RALPH.md":/workspace/CLAUDE.md:ro \
-  -v "$CLAUDE_TMP":/home/ralph/.claude \
-  -v ~/.gitconfig:/home/ralph/.gitconfig:ro \
-  -v "$RALPH_DIR/prompt.md":/ralph/prompt.md:ro \
-  ralph /ralph/ralph-loop.sh "$MAX_ITER"
-DOCKER_EXIT=$?
-set -e
-
-# Determine whether to run on-complete or on-error hook
-TICKET_AFTER=""
-TICKET_STATUS=""
-if [[ -n "$TICKET_ID_BEFORE" ]]; then
-  TICKET_AFTER=$(jq -c --arg id "$TICKET_ID_BEFORE" '.tickets[] | select(.id == ($id | tonumber))' tickets.json 2>/dev/null || echo '{}')
-  TICKET_STATUS=$(echo "$TICKET_AFTER" | jq -r '.status // empty')
-fi
-
-# Get current commit hash for hook context
-COMMIT_HASH=$(git rev-parse HEAD 2>/dev/null || echo "")
-
-# Run on-complete hook if docker exited successfully and ticket was completed
-if [[ $DOCKER_EXIT -eq 0 && -d "hooks.d/on-complete" && "$TICKET_STATUS" == "completed" ]]; then
-  # Extract last progress.txt entry
-  SUMMARY=""
-  if [[ -f "progress.txt" ]]; then
-    SUMMARY=$(awk '/^## Ticket #/{found=1; buf=""} found{buf=buf"\n"$0} END{print buf}' progress.txt | tail -c 2000)
+  # Check if all tickets done (no pending or in_progress)
+  if jq -e '[.tickets[] | select(.status == "pending" or .status == "in_progress")] | length == 0' tickets.json > /dev/null 2>&1; then
+    echo "All tickets complete!"
+    exit 0
   fi
 
-  TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  PAYLOAD=$(jq -n --argjson ticket "$TICKET_AFTER" --arg summary "$SUMMARY" --arg ts "$TIMESTAMP" --arg commit "$COMMIT_HASH" \
-    '{event: "complete", ticket: $ticket, summary: $summary, timestamp: $ts, commit: $commit}')
-  "$RALPH_DIR/bin/ralph-hooks" on-complete "$PAYLOAD" || true
+  # Show remaining tickets
+  REMAINING=$(jq '[.tickets[] | select(.status == "pending" or .status == "in_progress")] | length' tickets.json)
+  echo "Remaining tickets: $REMAINING"
 
-# Run on-error hook if docker exited non-zero or ticket completion not detected
-elif [[ -d "hooks.d/on-error" && -n "$TICKET_ID_BEFORE" ]]; then
-  TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  PAYLOAD=$(jq -n --argjson ticket "${TICKET_AFTER:-$TICKET_BEFORE}" --argjson exit_code "$DOCKER_EXIT" --arg ts "$TIMESTAMP" --arg commit "$COMMIT_HASH" \
-    '{event: "error", ticket: $ticket, exit_code: $exit_code, timestamp: $ts, commit: $commit}')
-  "$RALPH_DIR/bin/ralph-hooks" on-error "$PAYLOAD" || true
-fi
+  # Run on-start hook (on host) with current ticket context
+  if [[ -d "hooks.d/on-start" ]]; then
+    CURRENT_TICKET=$(jq -c '[.tickets[] | select(.status == "pending" or .status == "in_progress")] | sort_by(.priority) | first' tickets.json 2>/dev/null || echo '{}')
+    if [[ -z "$CURRENT_TICKET" || "$CURRENT_TICKET" == "null" ]]; then
+      CURRENT_TICKET='{}'
+    fi
+    TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    PAYLOAD=$(jq -n --argjson ticket "$CURRENT_TICKET" --arg ts "$TIMESTAMP" '{event: "start", ticket: $ticket, timestamp: $ts}')
+    "$RALPH_DIR/bin/ralph-hooks" on-start "$PAYLOAD" || true
+  fi
 
-exit $DOCKER_EXIT
+  # Clean up any exited ralph container
+  if docker ps -a --filter "status=exited" --format '{{.Names}}' | grep -q '^ralph$'; then
+    docker rm ralph >/dev/null
+  fi
+
+  # Check for running container
+  if docker ps --format '{{.Names}}' | grep -q '^ralph$'; then
+    echo "Error: Container 'ralph' is already running. Run 'ralph-stop' to stop it."
+    exit 1
+  fi
+
+  # Capture ticket state before docker run for comparison
+  TICKET_BEFORE=$(jq -c '[.tickets[] | select(.status == "pending" or .status == "in_progress")] | sort_by(.priority) | first' tickets.json 2>/dev/null || echo '{}')
+  if [[ -z "$TICKET_BEFORE" || "$TICKET_BEFORE" == "null" ]]; then
+    TICKET_BEFORE='{}'
+  fi
+  TICKET_ID_BEFORE=$(echo "$TICKET_BEFORE" | jq -r '.id // empty')
+
+  # Run docker for ONE ticket and capture exit code
+  set +e
+  docker run --name ralph $DOCKER_FLAGS \
+    -v "$(pwd)":/workspace \
+    -v "$(pwd)/RALPH.md":/workspace/CLAUDE.md:ro \
+    -v "$CLAUDE_TMP":/home/ralph/.claude \
+    -v ~/.gitconfig:/home/ralph/.gitconfig:ro \
+    -v "$RALPH_DIR/prompt.md":/ralph/prompt.md:ro \
+    ralph /ralph/ralph-once.sh
+  DOCKER_EXIT=$?
+  set -e
+
+  # Determine whether to run on-complete or on-error hook
+  TICKET_AFTER=""
+  TICKET_STATUS=""
+  if [[ -n "$TICKET_ID_BEFORE" ]]; then
+    TICKET_AFTER=$(jq -c --arg id "$TICKET_ID_BEFORE" '.tickets[] | select(.id == ($id | tonumber))' tickets.json 2>/dev/null || echo '{}')
+    TICKET_STATUS=$(echo "$TICKET_AFTER" | jq -r '.status // empty')
+  fi
+
+  # Get current commit hash for hook context
+  COMMIT_HASH=$(git rev-parse HEAD 2>/dev/null || echo "")
+
+  # Run on-complete hook if docker exited successfully and ticket was completed
+  if [[ $DOCKER_EXIT -eq 0 && -d "hooks.d/on-complete" && "$TICKET_STATUS" == "completed" ]]; then
+    # Extract last progress.txt entry
+    SUMMARY=""
+    if [[ -f "progress.txt" ]]; then
+      SUMMARY=$(awk '/^## Ticket #/{found=1; buf=""} found{buf=buf"\n"$0} END{print buf}' progress.txt | tail -c 2000)
+    fi
+
+    TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    PAYLOAD=$(jq -n --argjson ticket "$TICKET_AFTER" --arg summary "$SUMMARY" --arg ts "$TIMESTAMP" --arg commit "$COMMIT_HASH" \
+      '{event: "complete", ticket: $ticket, summary: $summary, timestamp: $ts, commit: $commit}')
+    "$RALPH_DIR/bin/ralph-hooks" on-complete "$PAYLOAD" || true
+
+  # Run on-error hook if docker exited non-zero or ticket completion not detected
+  elif [[ -d "hooks.d/on-error" && -n "$TICKET_ID_BEFORE" ]]; then
+    TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    PAYLOAD=$(jq -n --argjson ticket "${TICKET_AFTER:-$TICKET_BEFORE}" --argjson exit_code "$DOCKER_EXIT" --arg ts "$TIMESTAMP" --arg commit "$COMMIT_HASH" \
+      '{event: "error", ticket: $ticket, exit_code: $exit_code, timestamp: $ts, commit: $commit}')
+    "$RALPH_DIR/bin/ralph-hooks" on-error "$PAYLOAD" || true
+
+    # Exit on error - don't continue to next ticket
+    exit $DOCKER_EXIT
+  fi
+done
+
+echo ""
+echo "=== Max iterations ($MAX_ITER) reached ==="
+echo "Some tickets may still be incomplete."

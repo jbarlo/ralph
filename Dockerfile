@@ -47,13 +47,13 @@ RUN . ~/.nix-profile/etc/profile.d/nix.sh && \
 
 # Copy scripts
 USER root
-COPY ralph-once.sh ralph-loop.sh prompt.md /ralph/
+COPY ralph-once.sh prompt.md /ralph/
 RUN mkdir -p /workspace && chown -R ralph:ralph /workspace /ralph && chmod +x /ralph/*.sh
 
 # Switch to non-root user
 USER ralph
 WORKDIR /workspace
 
-# Default to loop mode
+# Default to single-ticket mode (host script handles loop)
 ENTRYPOINT ["/bin/bash", "-c", ". ~/.nix-profile/etc/profile.d/nix.sh && nix develop /ralph --command \"$@\"", "--"]
-CMD ["/ralph/ralph-loop.sh"]
+CMD ["/ralph/ralph-once.sh"]

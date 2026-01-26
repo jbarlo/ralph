@@ -80,3 +80,13 @@ Append-only log of completed work. Each iteration adds to this file.
 - Files changed: bin/ralph-hooks, bin/ralph-help
 - Tests: verified all commands (list, add, rm) with valid/invalid inputs, tested error handling
 
+## Ticket #10: Move iteration loop from container to host
+- Refactored bin/ralph to loop on host instead of inside docker container
+- Each iteration: runs on-start hook, starts docker for ONE ticket, runs on-complete/on-error hook
+- Hooks now fire per-ticket since docker exits after each iteration
+- Preserved MAX_ITER limit (default 20, configurable via first arg)
+- Removed ralph-loop.sh (no longer needed)
+- Updated Dockerfile to use ralph-once.sh as default CMD
+- Files changed: bin/ralph, Dockerfile, ralph-loop.sh (deleted)
+- Tests: verified bash syntax for bin/ralph and bin/ralph-once
+
