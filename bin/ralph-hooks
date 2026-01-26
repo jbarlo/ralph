@@ -151,12 +151,6 @@ cmd_run() {
     exit 0
   fi
 
-  # Read payload from file (avoids shell quoting issues with JSON)
-  local json_payload="{}"
-  if [[ -n "$payload_file" && -f "$payload_file" ]]; then
-    json_payload=$(cat "$payload_file")
-  fi
-
   local failed_hooks=()
 
   while IFS= read -r -d '' hook; do
@@ -167,7 +161,6 @@ cmd_run() {
 
       export RALPH_HOOK_EVENT="$event"
       export RALPH_HOOK_CONTEXT_FILE="$payload_file"
-      export RALPH_HOOK_CONTEXT="$json_payload"
       if ! cat "$payload_file" | "$hook"; then
         echo "Hook failed: $hook_name"
         failed_hooks+=("$hook_name")

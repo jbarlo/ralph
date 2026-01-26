@@ -11,25 +11,26 @@
 #   2. Make it executable:
 #      chmod +x notify.sh
 #
-# Hooks receive JSON via stdin and env vars:
-#   - stdin: full JSON payload (can be read once)
+# Hooks receive JSON via:
+#   - stdin: full JSON payload (read with: ctx=$(cat))
+#   - RALPH_HOOK_CONTEXT_FILE: path to JSON file (for multiple reads)
 #   - RALPH_HOOK_EVENT: event name ("error")
-#   - RALPH_HOOK_CONTEXT: full JSON payload (can be read multiple times)
 #
 # on-error payload structure:
 #   {
 #     "event": "error",
 #     "ticket": { "id": 1, "title": "...", "status": "...", ... },
 #     "exit_code": 1,
-#     "timestamp": "2025-01-26T12:00:00Z"
+#     "timestamp": "2025-01-26T12:00:00Z",
+#     "commit": "<git-hash>"
 #   }
 
 set -e
 
-# Parse fields from the JSON payload
-TICKET_ID=$(echo "$RALPH_HOOK_CONTEXT" | jq -r '.ticket.id')
-TICKET_TITLE=$(echo "$RALPH_HOOK_CONTEXT" | jq -r '.ticket.title')
-EXIT_CODE=$(echo "$RALPH_HOOK_CONTEXT" | jq -r '.exit_code')
+# Parse fields from the JSON payload (using file for multiple reads)
+TICKET_ID=$(jq -r '.ticket.id' "$RALPH_HOOK_CONTEXT_FILE")
+TICKET_TITLE=$(jq -r '.ticket.title' "$RALPH_HOOK_CONTEXT_FILE")
+EXIT_CODE=$(jq -r '.exit_code' "$RALPH_HOOK_CONTEXT_FILE")
 
 TITLE="Ralph Error"
 MESSAGE="Ticket #$TICKET_ID failed (exit $EXIT_CODE): $TICKET_TITLE"

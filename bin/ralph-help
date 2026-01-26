@@ -60,8 +60,8 @@ HOOKS
 
   Hook Context:
     Each hook receives JSON payload via:
-      - stdin (piped, can be read once)
-      - RALPH_HOOK_CONTEXT env var (can be read multiple times)
+      - stdin (piped, read with: ctx=$(cat))
+      - RALPH_HOOK_CONTEXT_FILE env var (path to JSON file)
       - RALPH_HOOK_EVENT env var (event name: "start", "complete", "error")
 
   Payload Formats:
