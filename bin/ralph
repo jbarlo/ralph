@@ -64,7 +64,9 @@ for i in $(seq 1 $MAX_ITER); do
       CURRENT_TICKET='{}'
     fi
     TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    PAYLOAD=$(echo "$CURRENT_TICKET" | jq --arg ts "$TIMESTAMP" '{event: "start", ticket: ., timestamp: $ts}')
+    PAYLOAD=$(jq --arg ts "$TIMESTAMP" \
+      '([.tickets[] | select(.status == "pending" or .status == "in_progress")] | sort_by(.priority) | first) as $ticket |
+       {event: "start", ticket: $ticket, timestamp: $ts}' tickets.json)
     "$RALPH_DIR/bin/ralph-hooks" on-start "$PAYLOAD" || true
   fi
 
@@ -118,15 +120,17 @@ for i in $(seq 1 $MAX_ITER); do
     fi
 
     TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    PAYLOAD=$(echo "$TICKET_AFTER" | jq --arg summary "$SUMMARY" --arg ts "$TIMESTAMP" --arg commit "$COMMIT_HASH" \
-      '{event: "complete", ticket: ., summary: $summary, timestamp: $ts, commit: $commit}')
+    PAYLOAD=$(jq --arg id "$TICKET_ID_BEFORE" --arg summary "$SUMMARY" --arg ts "$TIMESTAMP" --arg commit "$COMMIT_HASH" \
+      '(.tickets[] | select(.id == ($id | tonumber))) as $ticket |
+       {event: "complete", ticket: $ticket, summary: $summary, timestamp: $ts, commit: $commit}' tickets.json)
     "$RALPH_DIR/bin/ralph-hooks" on-complete "$PAYLOAD" || true
 
   # Run on-error hook if docker exited non-zero or ticket completion not detected
   elif [[ -d "hooks.d/on-error" && -n "$TICKET_ID_BEFORE" ]]; then
     TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    PAYLOAD=$(echo "${TICKET_AFTER:-$TICKET_BEFORE}" | jq --argjson exit_code "$DOCKER_EXIT" --arg ts "$TIMESTAMP" --arg commit "$COMMIT_HASH" \
-      '{event: "error", ticket: ., exit_code: $exit_code, timestamp: $ts, commit: $commit}')
+    PAYLOAD=$(jq --arg id "$TICKET_ID_BEFORE" --argjson exit_code "$DOCKER_EXIT" --arg ts "$TIMESTAMP" --arg commit "$COMMIT_HASH" \
+      '(.tickets[] | select(.id == ($id | tonumber))) as $ticket |
+       {event: "error", ticket: $ticket, exit_code: $exit_code, timestamp: $ts, commit: $commit}' tickets.json)
     "$RALPH_DIR/bin/ralph-hooks" on-error "$PAYLOAD" || true
 
     # Exit on error - don't continue to next ticket
