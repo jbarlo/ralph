@@ -25,7 +25,7 @@
       "id": 4,
       "title": "Implement on-complete hook",
       "description": "Modify bin/ralph and bin/ralph-once to call 'ralph-hooks on-complete' on host after docker exits successfully. Payload: {\"event\": \"complete\", \"ticket\": <completed-ticket-json>, \"summary\": <last-progress.txt-entry>, \"timestamp\": <iso8601>}. Must detect successful completion (check exit code and/or ticket status change) and extract the last progress.txt entry. Runs on host so hooks can access host tools. Depends on ticket #2.",
-      "status": "pending",
+      "status": "completed",
       "priority": 10
     },
     {

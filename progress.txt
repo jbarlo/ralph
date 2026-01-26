@@ -31,3 +31,13 @@ Append-only log of completed work. Each iteration adds to this file.
 - Files changed: bin/ralph, bin/ralph-once
 - Tests: verified JSON payload generation, tested with temporary hook script
 
+## Ticket #4: Implement on-complete hook
+- Added on-complete hook call to bin/ralph and bin/ralph-once after docker exits
+- Hook runs on host after docker exits successfully (exit code 0)
+- Checks if ticket status changed to "completed" before triggering hook
+- JSON payload: {event: "complete", ticket: <completed-ticket>, summary: <last-progress-entry>, timestamp: <iso8601>}
+- Summary extracted from progress.txt using awk (last ## Ticket entry)
+- Hook failures don't abort ralph (continues with || true)
+- Files changed: bin/ralph, bin/ralph-once
+- Tests: verified bash syntax, tested jq/awk commands, tested hook invocation with ralph-hooks
+
