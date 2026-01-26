@@ -48,9 +48,11 @@ if [[ -d "hooks.d/on-start" ]]; then
     CURRENT_TICKET='{}'
   fi
   TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  PAYLOAD=$(jq --arg ts "$TIMESTAMP" \
-    '{event: "start", ticket: ([.tickets[] | select(.status == "pending" or .status == "in_progress")] | sort_by(.priority) | first), timestamp: $ts}' tickets.json)
-  "$RALPH_DIR/bin/ralph-hooks" on-start "$PAYLOAD" || true
+  PAYLOAD_FILE=$(mktemp)
+  jq --arg ts "$TIMESTAMP" \
+    '{event: "start", ticket: ([.tickets[] | select(.status == "pending" or .status == "in_progress")] | sort_by(.priority) | first), timestamp: $ts}' tickets.json > "$PAYLOAD_FILE"
+  "$RALPH_DIR/bin/ralph-hooks" on-start "$PAYLOAD_FILE" || true
+  rm -f "$PAYLOAD_FILE"
 fi
 
 # Clean up any exited ralph container
@@ -103,16 +105,20 @@ if [[ $DOCKER_EXIT -eq 0 && -d "hooks.d/on-complete" && "$TICKET_STATUS" == "com
   fi
 
   TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  PAYLOAD=$(jq --arg id "$TICKET_ID_BEFORE" --arg summary "$SUMMARY" --arg ts "$TIMESTAMP" --arg commit "$COMMIT_HASH" \
-    '{event: "complete", ticket: first(.tickets[] | select(.id == ($id | tonumber))), summary: $summary, timestamp: $ts, commit: $commit}' tickets.json)
-  "$RALPH_DIR/bin/ralph-hooks" on-complete "$PAYLOAD" || true
+  PAYLOAD_FILE=$(mktemp)
+  jq --arg id "$TICKET_ID_BEFORE" --arg summary "$SUMMARY" --arg ts "$TIMESTAMP" --arg commit "$COMMIT_HASH" \
+    '{event: "complete", ticket: first(.tickets[] | select(.id == ($id | tonumber))), summary: $summary, timestamp: $ts, commit: $commit}' tickets.json > "$PAYLOAD_FILE"
+  "$RALPH_DIR/bin/ralph-hooks" on-complete "$PAYLOAD_FILE" || true
+  rm -f "$PAYLOAD_FILE"
 
 # Run on-error hook if docker exited non-zero or ticket completion not detected
 elif [[ -d "hooks.d/on-error" && -n "$TICKET_ID_BEFORE" ]]; then
   TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-  PAYLOAD=$(jq --arg id "$TICKET_ID_BEFORE" --argjson exit_code "$DOCKER_EXIT" --arg ts "$TIMESTAMP" --arg commit "$COMMIT_HASH" \
-    '{event: "error", ticket: first(.tickets[] | select(.id == ($id | tonumber))), exit_code: $exit_code, timestamp: $ts, commit: $commit}' tickets.json)
-  "$RALPH_DIR/bin/ralph-hooks" on-error "$PAYLOAD" || true
+  PAYLOAD_FILE=$(mktemp)
+  jq --arg id "$TICKET_ID_BEFORE" --argjson exit_code "$DOCKER_EXIT" --arg ts "$TIMESTAMP" --arg commit "$COMMIT_HASH" \
+    '{event: "error", ticket: first(.tickets[] | select(.id == ($id | tonumber))), exit_code: $exit_code, timestamp: $ts, commit: $commit}' tickets.json > "$PAYLOAD_FILE"
+  "$RALPH_DIR/bin/ralph-hooks" on-error "$PAYLOAD_FILE" || true
+  rm -f "$PAYLOAD_FILE"
 fi
 
 exit $DOCKER_EXIT
