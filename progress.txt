@@ -4,3 +4,10 @@ Append-only log of completed work. Each iteration adds to this file.
 
 ---
 
+## Ticket #1: Create hooks.d directory structure
+- Updated bin/ralph-init to create hooks.d/ directory with subdirectories: on-start/, on-complete/, on-error/
+- Each subdirectory contains a .gitkeep file for git tracking
+- Idempotent: skips creation if hooks.d/ already exists
+- Files changed: bin/ralph-init
+- Tests: verified directory structure created correctly, verified idempotence
+
