@@ -65,8 +65,7 @@ for i in $(seq 1 $MAX_ITER); do
     fi
     TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     PAYLOAD=$(jq --arg ts "$TIMESTAMP" \
-      '([.tickets[] | select(.status == "pending" or .status == "in_progress")] | sort_by(.priority) | first) as $ticket |
-       {event: "start", ticket: $ticket, timestamp: $ts}' tickets.json)
+      '{event: "start", ticket: ([.tickets[] | select(.status == "pending" or .status == "in_progress")] | sort_by(.priority) | first), timestamp: $ts}' tickets.json)
     "$RALPH_DIR/bin/ralph-hooks" on-start "$PAYLOAD" || true
   fi
 
@@ -121,16 +120,14 @@ for i in $(seq 1 $MAX_ITER); do
 
     TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     PAYLOAD=$(jq --arg id "$TICKET_ID_BEFORE" --arg summary "$SUMMARY" --arg ts "$TIMESTAMP" --arg commit "$COMMIT_HASH" \
-      '(.tickets[] | select(.id == ($id | tonumber))) as $ticket |
-       {event: "complete", ticket: $ticket, summary: $summary, timestamp: $ts, commit: $commit}' tickets.json)
+      '{event: "complete", ticket: first(.tickets[] | select(.id == ($id | tonumber))), summary: $summary, timestamp: $ts, commit: $commit}' tickets.json)
     "$RALPH_DIR/bin/ralph-hooks" on-complete "$PAYLOAD" || true
 
   # Run on-error hook if docker exited non-zero or ticket completion not detected
   elif [[ -d "hooks.d/on-error" && -n "$TICKET_ID_BEFORE" ]]; then
     TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     PAYLOAD=$(jq --arg id "$TICKET_ID_BEFORE" --argjson exit_code "$DOCKER_EXIT" --arg ts "$TIMESTAMP" --arg commit "$COMMIT_HASH" \
-      '(.tickets[] | select(.id == ($id | tonumber))) as $ticket |
-       {event: "error", ticket: $ticket, exit_code: $exit_code, timestamp: $ts, commit: $commit}' tickets.json)
+      '{event: "error", ticket: first(.tickets[] | select(.id == ($id | tonumber))), exit_code: $exit_code, timestamp: $ts, commit: $commit}' tickets.json)
     "$RALPH_DIR/bin/ralph-hooks" on-error "$PAYLOAD" || true
 
     # Exit on error - don't continue to next ticket
