@@ -18,7 +18,7 @@
       "id": 3,
       "title": "Implement on-start hook in ralph/ralph-once",
       "description": "Modify bin/ralph and bin/ralph-once to call 'ralph-hooks on-start' with ticket context before starting the docker container. The JSON payload should include: {\"event\": \"start\", \"ticket\": <current-ticket-json>, \"timestamp\": <iso8601>}. Run on host (not in container) so hooks can access host tools like todo CLI. Depends on ticket #2.",
-      "status": "pending",
+      "status": "completed",
       "priority": 10
     },
     {

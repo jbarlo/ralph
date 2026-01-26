@@ -42,6 +42,17 @@ if ! docker run --rm $DOCKER_FLAGS \
 fi
 echo "Auth OK. Starting ralph loop..."
 
+# Run on-start hook (on host) with current ticket context
+if [[ -d "hooks.d/on-start" ]]; then
+  CURRENT_TICKET=$(jq -c '[.tickets[] | select(.status == "pending" or .status == "in_progress")] | sort_by(.priority) | first' tickets.json 2>/dev/null || echo '{}')
+  if [[ -z "$CURRENT_TICKET" || "$CURRENT_TICKET" == "null" ]]; then
+    CURRENT_TICKET='{}'
+  fi
+  TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+  PAYLOAD=$(jq -n --argjson ticket "$CURRENT_TICKET" --arg ts "$TIMESTAMP" '{event: "start", ticket: $ticket, timestamp: $ts}')
+  "$RALPH_DIR/bin/ralph-hooks" on-start "$PAYLOAD" || true
+fi
+
 # Clean up any exited ralph container
 if docker ps -a --filter "status=exited" --format '{{.Names}}' | grep -q '^ralph$'; then
   docker rm ralph >/dev/null

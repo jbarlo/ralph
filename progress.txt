@@ -21,3 +21,13 @@ Append-only log of completed work. Each iteration adds to this file.
 - Files changed: bin/ralph-hooks (new)
 - Tests: verified with test hooks for success, failure, and continuation behavior
 
+## Ticket #3: Implement on-start hook in ralph/ralph-once
+- Added on-start hook call to bin/ralph before docker container starts
+- Added on-start hook call to bin/ralph-once before docker container starts
+- Hook runs on host (not in container) so hooks can access host tools
+- JSON payload: {event: "start", ticket: <current-ticket>, timestamp: <iso8601>}
+- Gets highest priority pending/in_progress ticket from tickets.json
+- Hook failures don't abort ralph (continues with || true)
+- Files changed: bin/ralph, bin/ralph-once
+- Tests: verified JSON payload generation, tested with temporary hook script
+
