@@ -43,6 +43,47 @@ DOCKER MOUNTS
   ~/.claude temp copy           Auth for Claude Code subscription
   ~/.gitconfig                  Git identity for commits
 
+HOOKS
+  Ralph supports lifecycle hooks that run on the host machine at key events.
+  Hooks can integrate with external tools (todo apps, notifications, etc).
+
+  Directory Structure:
+    hooks.d/
+      on-start/       Scripts run before each iteration starts
+      on-complete/    Scripts run after a ticket is successfully completed
+      on-error/       Scripts run when iteration fails
+
+  Enabling Hooks:
+    1. Create an executable script in the appropriate hooks.d/<event>/ directory
+    2. Scripts run in lexicographic order (prefix with 01-, 02-, etc. to control order)
+    3. Example hooks in hooks.d/ have .example extension; copy and chmod +x to enable
+
+  Hook Context:
+    Each hook receives JSON payload via:
+      - stdin (piped, can be read once)
+      - RALPH_HOOK_CONTEXT env var (can be read multiple times)
+      - RALPH_HOOK_EVENT env var (event name: "start", "complete", "error")
+
+  Payload Formats:
+
+    on-start:
+      {"event": "start", "ticket": {...}, "timestamp": "<iso8601>"}
+
+    on-complete:
+      {"event": "complete", "ticket": {...}, "summary": "<progress entry>", "timestamp": "<iso8601>"}
+
+    on-error:
+      {"event": "error", "ticket": {...}, "exit_code": <number>, "timestamp": "<iso8601>"}
+
+  Use Cases:
+    - Log completions to external system
+    - Send notifications on errors (Slack, desktop, email)
+    - Update external task trackers
+    - Trigger CI/CD pipelines on completion
+
+  Commands:
+    ralph-hooks <event> [json]    Manually trigger hooks (used internally by ralph)
+
 TIPS
   - Keep tickets small and atomic
   - Add project-specific test/build commands to CLAUDE.md

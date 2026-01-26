@@ -46,7 +46,7 @@
       "id": 7,
       "title": "Document hooks.d in ralph-help",
       "description": "Update bin/ralph-help to document the hooks.d system. Include: available events (on-start, on-complete, on-error), hook directory structure, payload format for each event, how to enable a hook (make executable), example use cases. Depends on tickets #1-5.",
-      "status": "pending",
+      "status": "completed",
       "priority": 10
     },
     {

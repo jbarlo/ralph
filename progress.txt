@@ -59,3 +59,14 @@ Append-only log of completed work. Each iteration adds to this file.
 - Files changed: hooks.d/on-complete/log-completion.sh.example, hooks.d/on-error/notify.sh.example
 - Tests: verified bash syntax, tested both hooks with sample JSON payloads
 
+## Ticket #7: Document hooks.d in ralph-help
+- Added new HOOKS section to bin/ralph-help documentation
+- Documents directory structure (hooks.d/on-start, on-complete, on-error)
+- Explains how to enable hooks (create executable script, lexicographic ordering)
+- Documents hook context (stdin, RALPH_HOOK_CONTEXT, RALPH_HOOK_EVENT env vars)
+- Shows payload format for each event type with JSON examples
+- Lists use cases: logging, notifications, external task trackers, CI/CD
+- Mentions ralph-hooks command for manual hook execution
+- Files changed: bin/ralph-help
+- Tests: verified ralph-help output renders correctly
+
