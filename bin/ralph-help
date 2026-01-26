@@ -82,7 +82,10 @@ HOOKS
     - Trigger CI/CD pipelines on completion
 
   Commands:
-    ralph-hooks <event> [json]    Manually trigger hooks (used internally by ralph)
+    ralph-hooks list [event]      List all hooks or hooks for specific event
+    ralph-hooks add <event> <script>  Add hook (symlink script to hooks.d/<event>/)
+    ralph-hooks rm <event> <name>     Remove hook from hooks.d/<event>/
+    ralph-hooks <event> [json]        Execute hooks for event (used internally)
 
 TIPS
   - Keep tickets small and atomic

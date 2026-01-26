@@ -70,3 +70,13 @@ Append-only log of completed work. Each iteration adds to this file.
 - Files changed: bin/ralph-help
 - Tests: verified ralph-help output renders correctly
 
+## Ticket #8: Add ralph hooks CLI management
+- Extended bin/ralph-hooks with subcommands: list, add, rm
+- `ralph-hooks list [event]`: lists all hooks or hooks for specific event, shows enabled/disabled status and symlink targets
+- `ralph-hooks add <event> <script>`: creates symlink to script in hooks.d/<event>/, makes it executable
+- `ralph-hooks rm <event> <name>`: removes hook from hooks.d/<event>/
+- All commands validate event name against valid events (on-start, on-complete, on-error)
+- Updated bin/ralph-help to document new commands
+- Files changed: bin/ralph-hooks, bin/ralph-help
+- Tests: verified all commands (list, add, rm) with valid/invalid inputs, tested error handling
+
