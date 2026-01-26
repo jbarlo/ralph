@@ -51,3 +51,11 @@ Append-only log of completed work. Each iteration adds to this file.
 - Files changed: bin/ralph, bin/ralph-once
 - Tests: verified bash syntax, tested JSON payload generation, tested ralph-hooks invocation
 
+## Ticket #6: Add example hook scripts
+- Created hooks.d/on-complete/log-completion.sh.example: logs completed tickets to ralph-completed.log
+- Created hooks.d/on-error/notify.sh.example: sends desktop notification on failure (notify-send/osascript/fallback)
+- Both hooks include detailed comments: how to enable, payload structure, parsing examples
+- Not executable by default (.example extension), require copy + chmod +x to enable
+- Files changed: hooks.d/on-complete/log-completion.sh.example, hooks.d/on-error/notify.sh.example
+- Tests: verified bash syntax, tested both hooks with sample JSON payloads
+

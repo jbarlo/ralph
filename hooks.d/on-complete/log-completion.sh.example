@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+#
+# Example on-complete hook: log ticket completion to a file
+#
+# This hook appends a timestamped entry to ralph-completed.log whenever
+# a ticket is successfully completed.
+#
+# To enable:
+#   1. Copy this file (remove .example extension):
+#      cp log-completion.sh.example log-completion.sh
+#   2. Make it executable:
+#      chmod +x log-completion.sh
+#
+# Hooks receive JSON via stdin and env vars:
+#   - stdin: full JSON payload (can be read once)
+#   - RALPH_HOOK_EVENT: event name ("complete")
+#   - RALPH_HOOK_CONTEXT: full JSON payload (can be read multiple times)
+#
+# on-complete payload structure:
+#   {
+#     "event": "complete",
+#     "ticket": { "id": 1, "title": "...", "status": "completed", ... },
+#     "summary": "## Ticket #1: ...\n- What was done\n...",
+#     "timestamp": "2025-01-26T12:00:00Z"
+#   }
+
+set -e
+
+LOG_FILE="${RALPH_COMPLETION_LOG:-ralph-completed.log}"
+
+# Parse fields from the JSON payload (using env var for multiple reads)
+TICKET_ID=$(echo "$RALPH_HOOK_CONTEXT" | jq -r '.ticket.id')
+TICKET_TITLE=$(echo "$RALPH_HOOK_CONTEXT" | jq -r '.ticket.title')
+TIMESTAMP=$(echo "$RALPH_HOOK_CONTEXT" | jq -r '.timestamp')
+
+# Append to log
+echo "[$TIMESTAMP] Completed ticket #$TICKET_ID: $TICKET_TITLE" >> "$LOG_FILE"

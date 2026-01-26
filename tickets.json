@@ -39,7 +39,7 @@
       "id": 6,
       "title": "Add example hook scripts",
       "description": "Create example hooks in hooks.d/ (not executable by default, use .example extension). Include: 1) on-complete/log-completion.sh.example - appends ticket summary to a log file, demonstrates parsing JSON payload. 2) on-error/notify.sh.example - sends desktop notification on failure (notify-send or similar). Comments in each should explain how to enable (chmod +x, rename) and how to adapt for other tools. Depends on ticket #1.",
-      "status": "pending",
+      "status": "completed",
       "priority": 10
     },
     {
