@@ -166,4 +166,13 @@ else
   echo "Created progress.txt"
 fi
 
+# hooks.d directory structure for lifecycle hooks
+if [[ -d hooks.d ]]; then
+  echo "hooks.d/ already exists"
+else
+  mkdir -p hooks.d/on-start hooks.d/on-complete hooks.d/on-error
+  touch hooks.d/on-start/.gitkeep hooks.d/on-complete/.gitkeep hooks.d/on-error/.gitkeep
+  echo "Created hooks.d/ with on-start/, on-complete/, on-error/"
+fi
+
 echo "Ready for ralph. Add tickets with: ralph-add \"title\" [priority] [description]"
