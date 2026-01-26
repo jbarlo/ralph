@@ -1,7 +1,13 @@
-FROM alpine:latest
+FROM debian:bookworm-slim
 
-# Install deps for nix and basic tools
-RUN apk add --no-cache curl xz git bash shadow coreutils
+# Install deps for nix, basic tools, and Playwright
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl xz-utils git bash ca-certificates \
+    # Playwright Chromium dependencies
+    libnss3 libnspr4 libdbus-1-3 libatk1.0-0 libatk-bridge2.0-0 \
+    libcups2 libdrm2 libxkbcommon0 libatspi2.0-0 libxcomposite1 \
+    libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user and nix directory
 RUN useradd -m -u 1000 ralph && \
@@ -29,11 +35,15 @@ WORKDIR /ralph
 # Build the devshell and cache deps
 RUN . ~/.nix-profile/etc/profile.d/nix.sh && nix develop --command true
 
-# Install claude-code to user's home
+# Install claude-code and playwright to user's home
 RUN mkdir -p ~/.npm-global && \
     . ~/.nix-profile/etc/profile.d/nix.sh && \
     nix develop --command bash -c "npm config set prefix ~/.npm-global && npm install -g @anthropic-ai/claude-code"
 ENV PATH="/home/ralph/.npm-global/bin:$PATH"
+
+# Install Playwright with Chromium only
+RUN . ~/.nix-profile/etc/profile.d/nix.sh && \
+    nix develop --command npx playwright install chromium
 
 # Copy scripts
 USER root
