@@ -136,8 +136,7 @@ for i in $(seq 1 $MAX_ITER); do
     "$RALPH_DIR/bin/ralph-hooks" on-error "$PAYLOAD_FILE" || true
     rm -f "$PAYLOAD_FILE"
 
-    # Exit on error - don't continue to next ticket
-    exit $DOCKER_EXIT
+    # Continue to next iteration - ralph may retry or pick different ticket
   fi
 done
 
