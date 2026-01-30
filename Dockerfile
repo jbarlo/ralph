@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user and nix directory
-RUN useradd -m -u 1000 ralph && \
+RUN useradd -m -u 1000 -G root ralph && \
     mkdir -p /home/ralph/.claude && \
     chown -R ralph:ralph /home/ralph && \
     mkdir -m 0755 /nix && chown ralph /nix
@@ -47,13 +47,11 @@ RUN . ~/.nix-profile/etc/profile.d/nix.sh && \
 
 # Copy scripts
 USER root
-COPY ralph-once.sh prompt.md /ralph/
+COPY ralph-once.sh prompt.md entrypoint.sh /ralph/
 RUN mkdir -p /workspace && chown -R ralph:ralph /workspace /ralph && chmod +x /ralph/*.sh
 
-# Switch to non-root user
-USER ralph
+# Entrypoint starts as root to fix perms, then drops to ralph
+USER root
 WORKDIR /workspace
-
-# Default to single-ticket mode (host script handles loop)
-ENTRYPOINT ["/bin/bash", "-c", ". ~/.nix-profile/etc/profile.d/nix.sh && nix develop /ralph --command \"$@\"", "--"]
+ENTRYPOINT ["/ralph/entrypoint.sh"]
 CMD ["/ralph/ralph-once.sh"]
