@@ -106,6 +106,7 @@ for i in $(seq 1 $MAX_ITER); do
   # Run docker for ONE ticket and capture exit code
   set +e
   docker run --name ralph --userns=host $DOCKER_FLAGS \
+    -e RALPH_LOOP=1 \
     -v "$(pwd)":/workspace \
     -v "$(pwd)/RALPH.md":/workspace/CLAUDE.md:ro \
     -v ~/.claude:/claude-host:ro \

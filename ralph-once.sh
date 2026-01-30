@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -e
 
-echo "=== Ralph Once ==="
-echo "Working on one ticket, then stopping."
+if [[ -z "${RALPH_LOOP:-}" ]]; then
+  echo "=== Ralph Once ==="
+  echo "Working on one ticket, then stopping."
+fi
 
 cd /workspace
 
@@ -11,7 +13,9 @@ claude --print "$(cat /ralph/prompt.md)" \
   --dangerously-skip-permissions \
   --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebSearch,WebFetch,Task"
 
-# Checkpoint
-git add -A && git commit -m "ralph-once $(date +%H:%M)" || true
+# Checkpoint: commit any leftover changes ralph didn't commit itself
+git add -A && git commit -m "chore: ralph checkpoint $(date +%H:%M)" || true
 
-echo "=== Ralph Once Complete ==="
+if [[ -z "${RALPH_LOOP:-}" ]]; then
+  echo "=== Ralph Once Complete ==="
+fi
