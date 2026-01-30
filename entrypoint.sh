@@ -12,8 +12,11 @@ fi
 mkdir -p /home/ralph/.claude/projects/-workspace
 chown -R ralph:ralph /home/ralph/.claude/projects
 
-# Trust the bind-mounted workspace for git
-su ralph -c "git config --global --add safe.directory /workspace"
+# Trust the bind-mounted workspace for git.
+# sharedRepository=group ensures new .git/objects are group-writable, so
+# rootless Docker UID remapping doesn't create objects only ralph can access.
+# Set globally (not per-repo) to avoid mutating the host's .git/config.
+su ralph -c "git config --global --add safe.directory /workspace && git config --global core.sharedRepository group"
 
 # Run command as ralph in nix devshell
 CMD=$(printf '%q ' "$@")
