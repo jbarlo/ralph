@@ -1,12 +1,22 @@
 #!/usr/bin/env bash
 set -e
 
-# Initialize ralph in current directory
-if [[ -f tickets.json ]]; then
-  echo "tickets.json already exists"
+# Initialize ralph in current directory, creating .ralph/ state directory
+
+if [[ -d .ralph ]]; then
+  echo ".ralph/ already exists"
 else
-  echo '{"tickets": []}' > tickets.json
-  echo "Created tickets.json"
+  mkdir -p .ralph
+  echo "Created .ralph/"
+fi
+
+if [[ -f .ralph/tickets.json ]]; then
+  echo ".ralph/tickets.json already exists"
+elif [[ -f tickets.json ]]; then
+  echo "tickets.json exists at root (run 'ralph migrate' to move into .ralph/)"
+else
+  echo '{"tickets": []}' > .ralph/tickets.json
+  echo "Created .ralph/tickets.json"
 fi
 
 # flake.nix - basic nix development environment
@@ -50,11 +60,11 @@ You are ralph, an autonomous coding agent. Complete ONE ticket per iteration.
 
 ## Workflow
 
-1. Read `tickets.json`, pick best incomplete ticket (priority is a hint, consider dependencies)
+1. Read `.ralph/tickets.json`, pick best incomplete ticket (priority is a hint, consider dependencies)
 2. Complete the ticket
 3. Verify with tests/type checks if applicable
-4. Mark ticket as `passes: true` in tickets.json
-5. Append summary to progress.txt
+4. Mark ticket as `passes: true` in .ralph/tickets.json
+5. Append summary to .ralph/progress.txt
 6. Exit (loop handles next iteration)
 
 ## Ticket Format
@@ -76,7 +86,7 @@ When done, set status to "completed" (or "failed" if unable to complete).
 
 ## Progress Log
 
-Append to progress.txt after each ticket:
+Append to .ralph/progress.txt after each ticket:
 ```
 ## Ticket #1: Short title
 - What was done
@@ -152,27 +162,32 @@ ralph                                         # run all tickets
 
 ## Files
 
-- tickets.json: task queue (edit directly or use ralph-add)
+- .ralph/tickets.json: task queue (edit directly or use ralph-add)
+- .ralph/progress.txt: log of completed work
+- .ralph/hooks.d/: lifecycle hooks
 - RALPH.md: instructions for the executor (edit for project-specific guidance)
-- progress.txt: log of completed work
 EOF
   echo "Created CLAUDE.md"
 fi
 
-if [[ -f progress.txt ]]; then
-  echo "progress.txt already exists"
+if [[ -f .ralph/progress.txt ]]; then
+  echo ".ralph/progress.txt already exists"
+elif [[ -f progress.txt ]]; then
+  echo "progress.txt exists at root (run 'ralph migrate' to move into .ralph/)"
 else
-  echo "# Ralph Progress Log" > progress.txt
-  echo "Created progress.txt"
+  echo "# Ralph Progress Log" > .ralph/progress.txt
+  echo "Created .ralph/progress.txt"
 fi
 
 # hooks.d directory structure for lifecycle hooks
-if [[ -d hooks.d ]]; then
-  echo "hooks.d/ already exists"
+if [[ -d .ralph/hooks.d ]]; then
+  echo ".ralph/hooks.d/ already exists"
+elif [[ -d hooks.d ]]; then
+  echo "hooks.d/ exists at root (run 'ralph migrate' to move into .ralph/)"
 else
-  mkdir -p hooks.d/on-start hooks.d/on-complete hooks.d/on-error
-  touch hooks.d/on-start/.gitkeep hooks.d/on-complete/.gitkeep hooks.d/on-error/.gitkeep
-  echo "Created hooks.d/ with on-start/, on-complete/, on-error/"
+  mkdir -p .ralph/hooks.d/on-start .ralph/hooks.d/on-complete .ralph/hooks.d/on-error
+  touch .ralph/hooks.d/on-start/.gitkeep .ralph/hooks.d/on-complete/.gitkeep .ralph/hooks.d/on-error/.gitkeep
+  echo "Created .ralph/hooks.d/ with on-start/, on-complete/, on-error/"
 fi
 
 echo "Ready for ralph. Add tickets with: ralph-add \"title\" [priority] [description]"

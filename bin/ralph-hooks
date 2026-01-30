@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -e
 
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+  SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+  SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+  [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+RALPH_DIR="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
+
+source "$RALPH_DIR/lib/ralph-state.sh"
+
 VALID_EVENTS=("on-start" "on-complete" "on-error")
 
 is_valid_event() {
@@ -42,7 +52,7 @@ cmd_list() {
 
 list_hooks_for_event() {
   local event="$1"
-  local hooks_dir="hooks.d/$event"
+  local hooks_dir="$RALPH_HOOKS_DIR/$event"
 
   echo "$event:"
   if [[ ! -d "$hooks_dir" ]]; then
@@ -94,9 +104,9 @@ cmd_add() {
     exit 1
   fi
 
-  local hooks_dir="hooks.d/$event"
+  local hooks_dir="$RALPH_HOOKS_DIR/$event"
   if [[ ! -d "$hooks_dir" ]]; then
-    echo "Error: hooks.d/$event directory not found. Run ralph-init first."
+    echo "Error: $hooks_dir directory not found. Run ralph-init first."
     exit 1
   fi
 
@@ -130,7 +140,7 @@ cmd_rm() {
     exit 1
   fi
 
-  local hooks_dir="hooks.d/$event"
+  local hooks_dir="$RALPH_HOOKS_DIR/$event"
   local target="$hooks_dir/$name"
 
   if [[ ! -e "$target" ]]; then
@@ -145,7 +155,7 @@ cmd_rm() {
 cmd_run() {
   local event="$1"
   local payload_file="$2"
-  local hooks_dir="hooks.d/$event"
+  local hooks_dir="$RALPH_HOOKS_DIR/$event"
 
   if [[ ! -d "$hooks_dir" ]]; then
     exit 0

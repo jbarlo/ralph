@@ -4,10 +4,10 @@ cat << 'EOF'
 RALPH - Autonomous coding agent loop
 
 Ralph runs Claude Code in a loop, completing tickets one at a time until done.
-Progress persists in files (tickets.json, progress.txt) and git history.
+Progress persists in files (.ralph/tickets.json, .ralph/progress.txt) and git history.
 
 SETUP
-  ralph-init                    Bootstrap current dir with tickets.json, CLAUDE.md, progress.txt
+  ralph-init                    Bootstrap current dir with .ralph/ state directory
   ralph-build                   Build the docker image (run once, or after updating ralph)
 
 TICKETS
@@ -20,18 +20,26 @@ EXECUTION
   ralph [max_iter]              Run loop until all tickets done (default: 20 iterations)
   ralph-once                    Run one ticket, then stop
 
+MIGRATION
+  ralph migrate                 Move root-level state files into .ralph/ directory
+
 HOW IT WORKS
-  1. Ralph reads tickets.json for incomplete tickets (passes: false)
+  1. Ralph reads .ralph/tickets.json for incomplete tickets
   2. Picks best ticket considering priority and dependencies
   3. Works on it, runs tests/checks to verify
-  4. Marks ticket passes: true, appends to progress.txt
+  4. Marks ticket completed, appends to .ralph/progress.txt
   5. Git commits, exits. Loop starts next iteration.
 
 FILES (in your project)
-  tickets.json    Task list. Ralph updates passes flag when done.
-  RALPH.md        Instructions for ralph (executor). Mounted as CLAUDE.md in container.
-  CLAUDE.md       Instructions for you (orchestrator/planner).
-  progress.txt    Append-only log of what ralph did each iteration.
+  .ralph/                State directory (created by ralph-init)
+    tickets.json         Task list. Ralph updates status when done.
+    progress.txt         Append-only log of what ralph did each iteration.
+    hooks.d/             Lifecycle hooks directory.
+  RALPH.md               Instructions for ralph (executor). Mounted as CLAUDE.md in container.
+  CLAUDE.md              Instructions for you (orchestrator/planner).
+
+  Legacy: tickets.json, progress.txt, hooks.d/ at project root are still
+  supported for backwards compatibility. Use 'ralph migrate' to move them.
 
 REQUIREMENTS
   - Must run inside a git repository (ralph commits after each iteration)
@@ -48,15 +56,15 @@ HOOKS
   Hooks can integrate with external tools (todo apps, notifications, etc).
 
   Directory Structure:
-    hooks.d/
+    .ralph/hooks.d/
       on-start/       Scripts run before each iteration starts
       on-complete/    Scripts run after a ticket is successfully completed
       on-error/       Scripts run when iteration fails
 
   Enabling Hooks:
-    1. Create an executable script in the appropriate hooks.d/<event>/ directory
+    1. Create an executable script in the appropriate .ralph/hooks.d/<event>/ directory
     2. Scripts run in lexicographic order (prefix with 01-, 02-, etc. to control order)
-    3. Example hooks in hooks.d/ have .example extension; copy and chmod +x to enable
+    3. Example hooks in .ralph/hooks.d/ have .example extension; copy and chmod +x to enable
 
   Hook Context:
     Each hook receives JSON payload via:
@@ -83,8 +91,8 @@ HOOKS
 
   Commands:
     ralph-hooks list [event]      List all hooks or hooks for specific event
-    ralph-hooks add <event> <script>  Add hook (symlink script to hooks.d/<event>/)
-    ralph-hooks rm <event> <name>     Remove hook from hooks.d/<event>/
+    ralph-hooks add <event> <script>  Add hook (symlink script to .ralph/hooks.d/<event>/)
+    ralph-hooks rm <event> <name>     Remove hook from .ralph/hooks.d/<event>/
     ralph-hooks <event> [json]        Execute hooks for event (used internally)
 
 TIPS

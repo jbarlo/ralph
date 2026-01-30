@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -e
+
+# Migrate root-level ralph state files into .ralph/ directory
+
+mkdir -p .ralph
+
+migrated=0
+
+if [[ -f tickets.json && ! -f .ralph/tickets.json ]]; then
+  mv tickets.json .ralph/tickets.json
+  echo "Moved tickets.json -> .ralph/tickets.json"
+  migrated=1
+elif [[ -f tickets.json && -f .ralph/tickets.json ]]; then
+  echo "Warning: both tickets.json and .ralph/tickets.json exist; skipping (resolve manually)"
+fi
+
+if [[ -f progress.txt && ! -f .ralph/progress.txt ]]; then
+  mv progress.txt .ralph/progress.txt
+  echo "Moved progress.txt -> .ralph/progress.txt"
+  migrated=1
+elif [[ -f progress.txt && -f .ralph/progress.txt ]]; then
+  echo "Warning: both progress.txt and .ralph/progress.txt exist; skipping (resolve manually)"
+fi
+
+if [[ -d hooks.d && ! -d .ralph/hooks.d ]]; then
+  mv hooks.d .ralph/hooks.d
+  echo "Moved hooks.d/ -> .ralph/hooks.d/"
+  migrated=1
+elif [[ -d hooks.d && -d .ralph/hooks.d ]]; then
+  echo "Warning: both hooks.d/ and .ralph/hooks.d/ exist; skipping (resolve manually)"
+fi
+
+if [[ $migrated -eq 0 ]]; then
+  echo "Nothing to migrate. State files are already in .ralph/ or no root-level files found."
+else
+  echo "Migration complete. State files are now in .ralph/"
+fi

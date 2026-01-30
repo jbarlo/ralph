@@ -90,3 +90,16 @@ Append-only log of completed work. Each iteration adds to this file.
 - Files changed: bin/ralph, Dockerfile, ralph-loop.sh (deleted)
 - Tests: verified bash syntax for bin/ralph and bin/ralph-once
 
+## Ticket #9: Move ralph state to .ralph/ directory
+- Created lib/ralph-state.sh shared helper that resolves state paths (.ralph/ preferred, root fallback)
+- Updated all bin/ scripts (ralph, ralph-once, ralph-hooks, ralph-init, ralph-add, ralph-tickets) to source lib/ralph-state.sh and use $RALPH_TICKETS, $RALPH_PROGRESS, $RALPH_HOOKS_DIR
+- ralph-init now creates .ralph/ directory structure instead of root-level files; detects existing root files and suggests migration
+- Created bin/ralph-migrate to move root-level tickets.json, progress.txt, hooks.d/ into .ralph/ with conflict detection
+- Added `ralph migrate` and `ralph hooks` subcommand dispatch in bin/ralph
+- Updated bin/ralph-help to document .ralph/ structure, migration, and legacy fallback
+- Updated prompt.md to instruct container agent to check .ralph/ paths first with root fallback
+- Added ralph_resolve_state re-resolution call after docker exits (handles mid-run migration)
+- Updated .exports to include ralph-migrate
+- Files changed: lib/ralph-state.sh (new), bin/ralph, bin/ralph-once, bin/ralph-hooks, bin/ralph-init, bin/ralph-add, bin/ralph-tickets, bin/ralph-help, bin/ralph-migrate (new), prompt.md, .exports, test/test-state-dir.sh (new)
+- Tests: 27 integration tests pass (state resolution, fallback, migration, conflict handling, init, add, tickets)
+

@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
 set -e
 
-if [[ ! -f tickets.json ]]; then
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_PATH" ]; do
+  SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+  SCRIPT_PATH="$(readlink "$SCRIPT_PATH")"
+  [[ "$SCRIPT_PATH" != /* ]] && SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_PATH"
+done
+RALPH_DIR="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
+
+source "$RALPH_DIR/lib/ralph-state.sh"
+
+if [[ ! -f "$RALPH_TICKETS" ]]; then
   echo "No tickets.json found."
   exit 1
 fi
@@ -10,19 +20,19 @@ MODE="${1:-pending}"
 
 case "$MODE" in
   pending|p)
-    jq -r '.tickets[] | select(.status == "pending" or .status == "in_progress") | "[\(.priority)] #\(.id): \(.title)" + (if .status == "in_progress" then " (in progress)" else "" end) + (if .description != "" then "\n    " + .description else "" end)' tickets.json
+    jq -r '.tickets[] | select(.status == "pending" or .status == "in_progress") | "[\(.priority)] #\(.id): \(.title)" + (if .status == "in_progress" then " (in progress)" else "" end) + (if .description != "" then "\n    " + .description else "" end)' "$RALPH_TICKETS"
     ;;
   done|d)
-    jq -r '.tickets[] | select(.status == "completed") | "#\(.id): \(.title)"' tickets.json
+    jq -r '.tickets[] | select(.status == "completed") | "#\(.id): \(.title)"' "$RALPH_TICKETS"
     ;;
   failed|f)
-    jq -r '.tickets[] | select(.status == "failed") | "#\(.id): \(.title)"' tickets.json
+    jq -r '.tickets[] | select(.status == "failed") | "#\(.id): \(.title)"' "$RALPH_TICKETS"
     ;;
   draft|dr)
-    jq -r '.tickets[] | select(.status == "draft") | "[\(.priority)] #\(.id): \(.title)" + (if .description != "" then "\n    " + .description else "" end)' tickets.json
+    jq -r '.tickets[] | select(.status == "draft") | "[\(.priority)] #\(.id): \(.title)" + (if .description != "" then "\n    " + .description else "" end)' "$RALPH_TICKETS"
     ;;
   all|a)
-    jq -r '.tickets[] | "[\(.status | .[0:1])] #\(.id): \(.title)"' tickets.json
+    jq -r '.tickets[] | "[\(.status | .[0:1])] #\(.id): \(.title)"' "$RALPH_TICKETS"
     ;;
   *)
     echo "Usage: ralph-tickets [pending|done|failed|draft|all]"

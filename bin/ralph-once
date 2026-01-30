@@ -11,19 +11,21 @@ while [ -L "$SCRIPT_PATH" ]; do
 done
 RALPH_DIR="$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)"
 
+source "$RALPH_DIR/lib/ralph-state.sh"
+
 # Check we're in a git repo
 if ! git rev-parse --is-inside-work-tree &>/dev/null; then
   echo "Error: ralph must run inside a git repository"
   exit 1
 fi
 
-# Copy ~/.claude to temp dir so ralph can write session data without touching host
-CLAUDE_TMP=$(mktemp -d)
-trap "rm -rf $CLAUDE_TMP" EXIT
-cp -r ~/.claude/. "$CLAUDE_TMP/" 2>/dev/null || true
-
-# Pre-create project dir for /workspace path to skip consent prompts
-mkdir -p "$CLAUDE_TMP/projects/-workspace"
+# Resolve host git config path
+GITCONFIG=""
+if [[ -f ~/.gitconfig ]]; then
+  GITCONFIG="$HOME/.gitconfig"
+elif [[ -f ~/.config/git/config ]]; then
+  GITCONFIG="$HOME/.config/git/config"
+fi
 
 # TTY detection: use -it if interactive, -i otherwise
 DOCKER_FLAGS="-i"
@@ -34,7 +36,7 @@ fi
 # Pre-flight: verify claude auth works
 echo "Verifying claude auth..."
 if ! docker run --rm $DOCKER_FLAGS \
-  -v "$CLAUDE_TMP":/home/ralph/.claude \
+  -v ~/.claude:/claude-host:ro \
   ralph claude --version &>/dev/null; then
   echo "Error: claude auth check failed. Check your credentials."
   exit 1
@@ -42,15 +44,15 @@ fi
 echo "Auth OK. Running one ticket..."
 
 # Run on-start hook (on host) with current ticket context
-if [[ -d "hooks.d/on-start" ]]; then
-  CURRENT_TICKET=$(jq -c '[.tickets[] | select(.status == "pending" or .status == "in_progress")] | sort_by(.priority) | first' tickets.json 2>/dev/null || echo '{}')
+if [[ -d "$RALPH_HOOKS_DIR/on-start" ]]; then
+  CURRENT_TICKET=$(jq -c '[.tickets[] | select(.status == "pending" or .status == "in_progress")] | sort_by(.priority) | first' "$RALPH_TICKETS" 2>/dev/null || echo '{}')
   if [[ -z "$CURRENT_TICKET" || "$CURRENT_TICKET" == "null" ]]; then
     CURRENT_TICKET='{}'
   fi
   TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
   PAYLOAD_FILE=$(mktemp)
   jq --arg ts "$TIMESTAMP" \
-    '{event: "start", ticket: ([.tickets[] | select(.status == "pending" or .status == "in_progress")] | sort_by(.priority) | first), timestamp: $ts}' tickets.json > "$PAYLOAD_FILE"
+    '{event: "start", ticket: ([.tickets[] | select(.status == "pending" or .status == "in_progress")] | sort_by(.priority) | first), timestamp: $ts}' "$RALPH_TICKETS" > "$PAYLOAD_FILE"
   "$RALPH_DIR/bin/ralph-hooks" on-start "$PAYLOAD_FILE" || true
   rm -f "$PAYLOAD_FILE"
 fi
@@ -67,7 +69,7 @@ if docker ps --format '{{.Names}}' | grep -q '^ralph$'; then
 fi
 
 # Capture ticket state before docker run for comparison
-TICKET_BEFORE=$(jq -c '[.tickets[] | select(.status == "pending" or .status == "in_progress")] | sort_by(.priority) | first' tickets.json 2>/dev/null || echo '{}')
+TICKET_BEFORE=$(jq -c '[.tickets[] | select(.status == "pending" or .status == "in_progress")] | sort_by(.priority) | first' "$RALPH_TICKETS" 2>/dev/null || echo '{}')
 if [[ -z "$TICKET_BEFORE" || "$TICKET_BEFORE" == "null" ]]; then
   TICKET_BEFORE='{}'
 fi
@@ -78,18 +80,21 @@ set +e
 docker run --name ralph $DOCKER_FLAGS \
   -v "$(pwd)":/workspace \
   -v "$(pwd)/RALPH.md":/workspace/CLAUDE.md:ro \
-  -v "$CLAUDE_TMP":/home/ralph/.claude \
-  -v ~/.gitconfig:/home/ralph/.gitconfig:ro \
+  -v ~/.claude:/claude-host:ro \
+  ${GITCONFIG:+-v "$GITCONFIG":/home/ralph/.gitconfig:ro} \
   -v "$RALPH_DIR/prompt.md":/ralph/prompt.md:ro \
   ralph /ralph/ralph-once.sh
 DOCKER_EXIT=$?
 set -e
 
+# Re-resolve state paths (container may have migrated)
+ralph_resolve_state
+
 # Determine whether to run on-complete or on-error hook
 TICKET_AFTER=""
 TICKET_STATUS=""
 if [[ -n "$TICKET_ID_BEFORE" ]]; then
-  TICKET_AFTER=$(jq -c --arg id "$TICKET_ID_BEFORE" '.tickets[] | select(.id == ($id | tonumber))' tickets.json 2>/dev/null || echo '{}')
+  TICKET_AFTER=$(jq -c --arg id "$TICKET_ID_BEFORE" '.tickets[] | select(.id == ($id | tonumber))' "$RALPH_TICKETS" 2>/dev/null || echo '{}')
   TICKET_STATUS=$(echo "$TICKET_AFTER" | jq -r '.status // empty')
 fi
 
@@ -97,26 +102,25 @@ fi
 COMMIT_HASH=$(git rev-parse HEAD 2>/dev/null || echo "")
 
 # Run on-complete hook if docker exited successfully and ticket was completed
-if [[ $DOCKER_EXIT -eq 0 && -d "hooks.d/on-complete" && "$TICKET_STATUS" == "completed" ]]; then
-  # Extract last progress.txt entry
+if [[ $DOCKER_EXIT -eq 0 && -d "$RALPH_HOOKS_DIR/on-complete" && "$TICKET_STATUS" == "completed" ]]; then
   SUMMARY=""
-  if [[ -f "progress.txt" ]]; then
-    SUMMARY=$(awk '/^## Ticket #/{found=1; buf=""} found{buf=buf"\n"$0} END{print buf}' progress.txt | tail -c 2000)
+  if [[ -f "$RALPH_PROGRESS" ]]; then
+    SUMMARY=$(awk '/^## Ticket #/{found=1; buf=""} found{buf=buf"\n"$0} END{print buf}' "$RALPH_PROGRESS" | tail -c 2000)
   fi
 
   TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
   PAYLOAD_FILE=$(mktemp)
   jq --arg id "$TICKET_ID_BEFORE" --arg summary "$SUMMARY" --arg ts "$TIMESTAMP" --arg commit "$COMMIT_HASH" \
-    '{event: "complete", ticket: first(.tickets[] | select(.id == ($id | tonumber))), summary: $summary, timestamp: $ts, commit: $commit}' tickets.json > "$PAYLOAD_FILE"
+    '{event: "complete", ticket: first(.tickets[] | select(.id == ($id | tonumber))), summary: $summary, timestamp: $ts, commit: $commit}' "$RALPH_TICKETS" > "$PAYLOAD_FILE"
   "$RALPH_DIR/bin/ralph-hooks" on-complete "$PAYLOAD_FILE" || true
   rm -f "$PAYLOAD_FILE"
 
 # Run on-error hook if docker exited non-zero or ticket completion not detected
-elif [[ -d "hooks.d/on-error" && -n "$TICKET_ID_BEFORE" ]]; then
+elif [[ -d "$RALPH_HOOKS_DIR/on-error" && -n "$TICKET_ID_BEFORE" ]]; then
   TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
   PAYLOAD_FILE=$(mktemp)
   jq --arg id "$TICKET_ID_BEFORE" --argjson exit_code "$DOCKER_EXIT" --arg ts "$TIMESTAMP" --arg commit "$COMMIT_HASH" \
-    '{event: "error", ticket: first(.tickets[] | select(.id == ($id | tonumber))), exit_code: $exit_code, timestamp: $ts, commit: $commit}' tickets.json > "$PAYLOAD_FILE"
+    '{event: "error", ticket: first(.tickets[] | select(.id == ($id | tonumber))), exit_code: $exit_code, timestamp: $ts, commit: $commit}' "$RALPH_TICKETS" > "$PAYLOAD_FILE"
   "$RALPH_DIR/bin/ralph-hooks" on-error "$PAYLOAD_FILE" || true
   rm -f "$PAYLOAD_FILE"
 fi

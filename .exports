@@ -7,6 +7,7 @@
     "ralph-stop": "./bin/ralph-stop",
     "ralph-add": "./bin/ralph-add",
     "ralph-tickets": "./bin/ralph-tickets",
-    "ralph-hooks": "./bin/ralph-hooks"
+    "ralph-hooks": "./bin/ralph-hooks",
+    "ralph-migrate": "./bin/ralph-migrate"
   }
 }
