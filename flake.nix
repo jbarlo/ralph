@@ -13,7 +13,6 @@
           packages = with pkgs; [
             nodejs_22
             pnpm
-            git
             jq
             just
             # claude-code installed via npm in shellHook
