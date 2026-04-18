@@ -8,11 +8,7 @@ import { listAll, listEvent, listNames, addHook, removeHook, isValidEvent, VALID
 import { runLoop } from './loop.js'
 import { runOnce } from './once.js'
 import { spawnSync } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
-
-const HERE = dirname(fileURLToPath(import.meta.url))
-const RALPH_DIR = join(HERE, '..')
+import { ralphDir } from './ralph-dir.js'
 
 const completionsBuiltin = builtins.completions()
 
@@ -130,7 +126,7 @@ cli.run(process.argv, {
   stop: () =>
     ok(stopContainer()),
   build: () => {
-    const r = spawnSync('docker', ['build', '-t', 'ralph', RALPH_DIR], { stdio: 'inherit' })
+    const r = spawnSync('docker', ['build', '-t', 'ralph', ralphDir()], { stdio: 'inherit' })
     if (r.status !== 0) process.exit(r.status ?? 1)
     return ok(undefined)
   },

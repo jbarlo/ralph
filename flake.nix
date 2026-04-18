@@ -8,25 +8,47 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs { inherit system; };
+        # Use baseline bun on x86_64-linux (no AVX requirement)
+        bun = if system == "x86_64-linux" then
+          pkgs.bun.overrideAttrs (old: {
+            src = pkgs.fetchurl {
+              url = "https://github.com/oven-sh/bun/releases/download/bun-v${old.version}/bun-linux-x64-baseline.zip";
+              hash = "sha256-GVSr7giQDeYQqLRpL1//psaxXYr959HeTT+Iz8YOfV8=";
+            };
+          })
+        else
+          pkgs.bun;
       in {
+        packages.default = pkgs.stdenv.mkDerivation {
+          pname = "ralph";
+          version = "0.1.0";
+          src = ./.;
+
+          nativeBuildInputs = [ bun ];
+
+          # Don't strip - bun binaries embed bytecode that gets corrupted
+          dontStrip = true;
+
+          buildPhase = ''
+            runHook preBuild
+            bun install --frozen-lockfile
+            bun build src/cli.ts --compile --outfile ralph
+            runHook postBuild
+          '';
+
+          installPhase = ''
+            runHook preInstall
+            mkdir -p $out/bin
+            cp ralph $out/bin/ralph
+            runHook postInstall
+          '';
+        };
+
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
-            nodejs_22
-            pnpm
+            bun
             jq
-            just
-            # claude-code installed via npm in shellHook
           ];
-
-          shellHook = ''
-            export PATH="$PWD/node_modules/.bin:$PATH"
-
-            # Install claude-code if not present
-            if ! command -v claude &> /dev/null; then
-              echo "Installing claude-code..."
-              npm install -g @anthropic-ai/claude-code
-            fi
-          '';
         };
       });
 }

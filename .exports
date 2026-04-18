@@ -1,7 +1,7 @@
 {
   "bin": {
     "ralph": {
-      "path": "./bin/ralph",
+      "path": "ralph",
       "desc": "Autonomous coding agent loop",
       "help": "ralph --help"
     }

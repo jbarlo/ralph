@@ -2,11 +2,6 @@ import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { dirname } from 'node:path'
-
-const HERE = dirname(fileURLToPath(import.meta.url))
-export const RALPH_DIR = join(HERE, '..')
 
 export function inGitRepo(): boolean {
   const r = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], { stdio: 'ignore' })
@@ -85,7 +80,6 @@ export function runRalphContainer(opts: RunOptions): number {
       args.push('-v', `${gitconfig}:/home/ralph/.gitconfig:ro`)
     }
   }
-  args.push('-v', `${join(RALPH_DIR, 'prompt.md')}:/ralph/prompt.md:ro`)
   args.push('ralph', '/ralph/ralph-once.sh')
 
   const r = spawnSync('docker', args, { stdio: 'inherit' })

@@ -5,10 +5,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "tsc",
-    "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "prepare": "tsc"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "jimkit-cli": "^0.1.0"
