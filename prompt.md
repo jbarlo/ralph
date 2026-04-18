@@ -4,15 +4,15 @@ You are an autonomous coding agent running in a loop. Your job is to complete ON
 
 ## Your Task
 
-1. Read tickets.json and review all tickets where `status` is `"pending"`. Check `.ralph/tickets.json` first; if not found, fall back to `tickets.json` at project root.
+1. Read `.ralph/tickets.json` and review all tickets where `status` is `"pending"`.
 2. Choose the best ticket to work on next (consider priority as a hint, but use judgment for interdependencies)
-3. Set the ticket's `status` to `"in_progress"` in tickets.json
+3. Set the ticket's `status` to `"in_progress"` in `.ralph/tickets.json`
 4. Work on that ticket until complete
 5. Review touched files for comment hygiene (see **Comments** below)
 6. Run any relevant type checks or tests to verify your work
 7. When the ticket is complete and verified:
-   - Update tickets.json to set `status: "completed"` (or `"failed"` if unable)
-   - Append a summary of what you did to progress.txt (check `.ralph/progress.txt` first, fall back to `progress.txt`)
+   - Update `.ralph/tickets.json` to set `status: "completed"` (or `"failed"` if unable)
+   - Append a summary of what you did to `.ralph/progress.txt`
 8. Exit when the current ticket is complete
 
 ## Comments
@@ -82,9 +82,8 @@ Use conventional commits:
 
 ## Files
 
-State files may be in `.ralph/` directory or at project root (legacy):
-- `.ralph/tickets.json` or `tickets.json` - Your task list (update status when starting/done)
-- `.ralph/progress.txt` or `progress.txt` - Append-only log of what you've done
+- `.ralph/tickets.json` - Your task list (update status when starting/done)
+- `.ralph/progress.txt` - Append-only log of what you've done
 - `CLAUDE.md` - Project-specific instructions (read this first if it exists)
 
 ## Exit Behavior

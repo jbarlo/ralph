@@ -4,12 +4,13 @@ This is a Ralph Loop project. The agent runs in iterations, completing one ticke
 
 ## Workflow
 
-1. Check `tickets.json` for the highest priority incomplete ticket
-2. Complete the ticket
-3. Verify with tests/type checks if applicable
-4. Mark ticket as `passes: true` in tickets.json
-5. Append summary to progress.txt
-6. Exit (loop handles next iteration)
+1. Check `.ralph/tickets.json` for the highest priority incomplete ticket
+2. Set its `status` to `"in_progress"`
+3. Complete the ticket
+4. Verify with tests/type checks if applicable
+5. Set `status` to `"completed"` (or `"failed"` if unable)
+6. Append summary to `.ralph/progress.txt`
+7. Exit (loop handles next iteration)
 
 ## Ticket Format
 
@@ -18,18 +19,20 @@ This is a Ralph Loop project. The agent runs in iterations, completing one ticke
   "id": 1,
   "title": "Short title",
   "description": "Detailed description of what to do",
-  "passes": false,
+  "status": "pending",
   "priority": 1
 }
 ```
 
+Status values: `draft` | `pending` | `in_progress` | `completed` | `failed`. Ignore `draft` tickets — they're not ready for execution.
+
 - Lower priority number = higher priority (do first)
-- Set `passes: true` only after verified complete
+- Set `status: "completed"` only after verified complete
 - Dependencies described in ticket text are sufficient; ralph resolves order from descriptions
 
 ## Progress Log
 
-Append to progress.txt after each ticket:
+Append to `.ralph/progress.txt` after each ticket:
 ```
 ## Ticket #1: Short title
 - What was done

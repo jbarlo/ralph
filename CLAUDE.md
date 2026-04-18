@@ -1,56 +1,47 @@
-# Project Instructions
+# Orchestrator Instructions
 
-This is a Ralph Loop project. The agent runs in iterations, completing one ticket at a time.
+This is a Ralph Loop project. You are the orchestrator — your job is to PLAN, not execute.
 
-## Workflow
+## Your Role
 
-1. Check `tickets.json` for the highest priority incomplete ticket
-2. Complete the ticket
-3. Verify with tests/type checks if applicable
-4. Mark ticket as `passes: true` in tickets.json
-5. Append summary to progress.txt
-6. Exit (loop handles next iteration)
+- Understand the problem/codebase
+- Break work into small, atomic tickets
+- Write clear ticket descriptions with acceptance criteria
+- Let ralph (the executor) do the implementation
 
-## Ticket Format
+## Guidelines
 
-```json
-{
-  "id": 1,
-  "title": "Short title",
-  "description": "Detailed description of what to do",
-  "passes": false,
-  "priority": 1
-}
+- Explore and understand before planning
+- Reference actual code/data when writing tickets
+- Don't write implementation code — that's ralph's job
+- Keep tickets small (one clear task each)
+- Include test/verification steps in descriptions
+
+## Debugging
+
+You CAN debug to understand problems, but only to write better tickets:
+- Run tests to understand what's failing
+- Read logs/errors to diagnose issues
+- Trace code paths to understand behavior
+- Write minimal repro cases if helpful for the ticket description
+
+Do NOT fix bugs directly — instead, write a ticket describing:
+- What's broken (with error messages/logs)
+- Where the problem likely is
+- What the fix should achieve
+
+## Commands
+
+```bash
+ralph add "title" [-p priority] [-d description]   # add ticket
+ralph tickets                                       # view pending
+ralph once                                          # run one ticket (test)
+ralph loop                                          # run all tickets
 ```
 
-- Lower priority number = higher priority (do first)
-- Set `passes: true` only after verified complete
-- Dependencies described in ticket text are sufficient; ralph resolves order from descriptions
+## Files
 
-## Progress Log
-
-Append to progress.txt after each ticket:
-```
-## Ticket #1: Short title
-- What was done
-- Files changed
-- Tests run
-```
-
-## Project-Specific Notes
-
-Add your project-specific instructions here:
-- Tech stack
-- Testing commands
-- Code conventions
-- etc.
-
-## Commits
-
-Use conventional commits:
-- `feat: ...` - new feature
-- `fix: ...` - bug fix
-- `refactor: ...` - code change (no new feature or fix)
-- `docs: ...` - documentation only
-- `test: ...` - adding/updating tests
-- `chore: ...` - maintenance, deps, config
+- `.ralph/tickets.json`: task queue (edit directly or use `ralph add`)
+- `.ralph/progress.txt`: log of completed work
+- `.ralph/hooks.d/`: lifecycle hooks
+- `RALPH.md`: instructions for the executor (edit for project-specific guidance)

@@ -4,41 +4,45 @@
 default:
     @just --list
 
+# Build the TS project
+build-cli:
+    npm run build
+
 # Build the docker image
 build:
-    ./bin/ralph-build
+    ./bin/ralph build
 
 # Run loop mode (all tickets until done)
 loop *args:
-    ./bin/ralph {{args}}
+    ./bin/ralph loop {{args}}
 
 # Run once mode (one ticket, then stop)
 once:
-    ./bin/ralph-once
+    ./bin/ralph once
 
 # Initialize ralph in current directory
 init:
-    ./bin/ralph-init
+    ./bin/ralph init
 
 # Show remaining tickets
 tickets:
-    @./bin/ralph-tickets pending
+    @./bin/ralph tickets
 
 # Show completed tickets
 done:
-    @./bin/ralph-tickets done
+    @./bin/ralph tickets done
 
 # Show all tickets
 all:
-    @./bin/ralph-tickets all
+    @./bin/ralph tickets all
 
 # Add a new ticket
 add title priority="10" description="":
-    @./bin/ralph-add "{{title}}" "{{priority}}" "{{description}}"
+    @./bin/ralph add "{{title}}" -p {{priority}} -d "{{description}}"
 
 # Show progress log
 progress:
-    cat progress.txt
+    cat .ralph/progress.txt
 
 # Clean docker image
 clean:

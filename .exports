@@ -1,13 +1,10 @@
 {
   "bin": {
-    "ralph-init": "./bin/ralph-init",
-    "ralph-help": "./bin/ralph-help",
-    "ralph": "./bin/ralph",
-    "ralph-once": "./bin/ralph-once",
-    "ralph-stop": "./bin/ralph-stop",
-    "ralph-add": "./bin/ralph-add",
-    "ralph-tickets": "./bin/ralph-tickets",
-    "ralph-hooks": "./bin/ralph-hooks",
-    "ralph-migrate": "./bin/ralph-migrate"
-  }
+    "ralph": {
+      "path": "./bin/ralph",
+      "desc": "Autonomous coding agent loop",
+      "help": "ralph --help"
+    }
+  },
+  "readme": "README.md"
 }
