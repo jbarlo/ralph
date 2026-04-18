@@ -50,6 +50,7 @@ fi
 echo "Verifying claude auth..."
 if ! docker run --rm --userns=host $DOCKER_FLAGS \
   -v ~/.claude:/claude-host:ro \
+  -v ~/.claude.json:/claude-host.json:ro \
   ralph claude --version &>/dev/null; then
   echo "Error: claude auth check failed. Check your credentials."
   exit 1
@@ -110,6 +111,7 @@ for i in $(seq 1 $MAX_ITER); do
     -v "$(pwd)":/workspace \
     -v "$(pwd)/RALPH.md":/workspace/CLAUDE.md:ro \
     -v ~/.claude:/claude-host:ro \
+    -v ~/.claude.json:/claude-host.json:ro \
     ${GITCONFIG:+-v "$GITCONFIG":/home/ralph/.gitconfig-host:ro -e GIT_CONFIG_SYSTEM=/home/ralph/.gitconfig-host} \
     -v "$RALPH_DIR/prompt.md":/ralph/prompt.md:ro \
     ralph /ralph/ralph-once.sh
