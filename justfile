@@ -8,7 +8,7 @@ default:
 build-cli:
     bun build src/cli.ts --compile --outfile ralph
 
-# Build the docker image
+# Build the podman image
 build:
     ./ralph build
 
@@ -48,6 +48,6 @@ test:
 progress:
     cat .ralph/progress.txt
 
-# Clean docker image
+# Clean podman image
 clean:
-    docker rmi ralph
+    podman rmi ralph

@@ -13,7 +13,7 @@
           pkgs.bun.overrideAttrs (old: {
             src = pkgs.fetchurl {
               url = "https://github.com/oven-sh/bun/releases/download/bun-v${old.version}/bun-linux-x64-baseline.zip";
-              hash = "sha256-GVSr7giQDeYQqLRpL1//psaxXYr959HeTT+Iz8YOfV8=";
+              hash = "sha256-a92s1qZYVWmLmBby10hx7aTdC3+pIRQMZEUkj5SnQv0=";
             };
           })
         else
@@ -48,6 +48,7 @@
           packages = with pkgs; [
             bun
             jq
+            podman
           ];
         };
       });

@@ -2,7 +2,6 @@
 import { defineCLI, ok, err, builtins } from 'jimkit-cli'
 import { addTicket } from './commands/add.js'
 import { listTickets, parseMode } from './commands/tickets.js'
-import { stopContainer } from './commands/stop.js'
 import { initProject } from './commands/init.js'
 import { listAll, listEvent, listNames, addHook, removeHook, isValidEvent, VALID_EVENTS } from './commands/hooks.js'
 import { runLoop } from './loop.js'
@@ -63,11 +62,8 @@ const cli = defineCLI({
         idsOnly: { type: 'boolean', description: 'Print only ticket IDs (for completions)' },
       },
     },
-    stop: {
-      description: 'Stop and remove the ralph container',
-    },
     build: {
-      description: 'Build the ralph docker image',
+      description: 'Build the ralph container image',
     },
     hooks: {
       description: 'Manage lifecycle hooks',
@@ -123,10 +119,8 @@ cli.run(process.argv, {
     ok(addTicket(args.title, opts.priority, opts.description)),
   tickets: (args, opts) =>
     ok(listTickets(parseMode(args.mode), opts.idsOnly ?? false)),
-  stop: () =>
-    ok(stopContainer()),
   build: () => {
-    const r = spawnSync('docker', ['build', '-t', 'ralph', ralphDir()], { stdio: 'inherit' })
+    const r = spawnSync('podman', ['build', '-t', 'ralph', ralphDir()], { stdio: 'inherit' })
     if (r.status !== 0) process.exit(r.status ?? 1)
     return ok(undefined)
   },

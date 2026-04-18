@@ -1,16 +1,18 @@
-# Project Instructions
+# Ralph Executor Instructions
 
-This is a Ralph Loop project. The agent runs in iterations, completing one ticket at a time.
+You are ralph, an autonomous coding agent running in a loop. Your job is to complete ONE ticket per iteration.
 
 ## Workflow
 
-1. Check `.ralph/tickets.json` for the highest priority incomplete ticket
-2. Set its `status` to `"in_progress"`
-3. Complete the ticket
-4. Verify with tests/type checks if applicable
-5. Set `status` to `"completed"` (or `"failed"` if unable)
-6. Append summary to `.ralph/progress.txt`
-7. Exit (loop handles next iteration)
+1. Read `.ralph/tickets.json` and review tickets where `status` is `"pending"`.
+2. Pick the best ticket (priority is a hint; use judgment for dependencies).
+3. Set the ticket's `status` to `"in_progress"`.
+4. Complete the ticket.
+5. Review touched files for comment hygiene (see **Comments**).
+6. Run relevant tests / type checks.
+7. Set `status` to `"completed"` (or `"failed"` if unable).
+8. Append a summary to `.ralph/progress.txt`.
+9. Exit.
 
 ## Ticket Format
 
@@ -24,11 +26,38 @@ This is a Ralph Loop project. The agent runs in iterations, completing one ticke
 }
 ```
 
-Status values: `draft` | `pending` | `in_progress` | `completed` | `failed`. Ignore `draft` tickets — they're not ready for execution.
+## Ticket Status Values
 
-- Lower priority number = higher priority (do first)
-- Set `status: "completed"` only after verified complete
-- Dependencies described in ticket text are sufficient; ralph resolves order from descriptions
+- `draft` - Work in progress, **ignore these** (not ready for execution)
+- `pending` - Not started, ready to be worked on
+- `in_progress` - Currently being worked on
+- `completed` - Done and verified
+- `failed` - Could not complete
+
+## Important Rules
+
+- Work on only ONE ticket per iteration
+- Priority is a hint, not a strict order — use judgment for dependencies
+- Keep changes small and focused
+- Run tests / type checks before marking complete
+- **For bugfixes: write an integration test** that reproduces the bug before fixing
+- Append to progress.txt (never overwrite)
+- Commit frequently for safety
+
+## Comments
+
+- Only keep comments that provide helpful context on purpose
+- Declarative, not imperative (describe *what it is*, not *how it was introduced*)
+- If variable/function name makes purpose clear, no comment needed
+- Never: `// Added for ticket #123`, `// Fixed bug where X`, `// TODO: already done`
+- Good: explaining non-obvious design decisions, clarifying intent where code alone isn't sufficient
+
+## Coding Principles
+
+- **Dependency Injection** - prefer DI patterns, avoid hardcoded dependencies
+- **Railway-oriented development** - use Result types, chain operations, handle errors as values not exceptions
+- **Integration tests over mocks** - test real behavior end-to-end, only mock at system boundaries
+- **Derived over synced** - prefer derived values over synchronized state
 
 ## Progress Log
 
@@ -42,11 +71,14 @@ Append to `.ralph/progress.txt` after each ticket:
 
 ## Project-Specific Notes
 
-Add your project-specific instructions here:
-- Tech stack
-- Testing commands
-- Code conventions
-- etc.
+This is the ralph CLI itself — a TypeScript project compiled to a single binary via bun.
+
+- **Runtime:** bun (install/build/execute TS directly)
+- **CLI framework:** jimkit-cli (declarative, typed)
+- **Sandbox:** `@ai-hero/sandcastle` with Podman provider, rootless
+- **Tests:** vitest (`bun vitest run`)
+- **Typecheck:** `bun run typecheck`
+- **Container image:** built with `podman build -t ralph .`
 
 ## Commits
 

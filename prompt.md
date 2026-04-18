@@ -84,7 +84,7 @@ Use conventional commits:
 
 - `.ralph/tickets.json` - Your task list (update status when starting/done)
 - `.ralph/progress.txt` - Append-only log of what you've done
-- `CLAUDE.md` - Project-specific instructions (read this first if it exists)
+- `RALPH.md` - Project-specific executor instructions (read this first if it exists)
 
 ## Exit Behavior
 

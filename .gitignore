@@ -4,3 +4,4 @@ result
 *.log
 .claude/
 ralph
+.cache/

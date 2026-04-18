@@ -1,14 +1,8 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { resolveState } from './state.js'
 import { readTickets, pickNext, remaining } from './tickets.js'
-import {
-  inGitRepo,
-  verifyClaudeAuth,
-  ralphContainerRunning,
-  removeExitedRalphContainer,
-  runRalphContainer,
-  currentCommit,
-} from './docker.js'
+import { runRalphContainer } from './sandcastle.js'
+import { inGitRepo, currentCommit, checkpointCommit } from './git.js'
 import { dispatchEvent } from './hooks-dispatch.js'
 import { startPayload, completePayload, errorPayload, extractLastProgressEntry } from './hooks-payloads.js'
 
@@ -18,14 +12,7 @@ export async function runLoop(maxIter: number): Promise<number> {
     return 1
   }
 
-  console.log('Verifying claude auth...')
-  const auth = verifyClaudeAuth(true)
-  if (!auth.ok) {
-    console.error('Error: claude auth check failed. Check your credentials.')
-    if (auth.stderr) console.error(auth.stderr.trim())
-    return 1
-  }
-  console.log(`Auth OK. Starting ralph loop (max ${maxIter} iterations)...`)
+  console.log(`Starting ralph loop (max ${maxIter} iterations)...`)
 
   for (let i = 1; i <= maxIter; i++) {
     console.log('')
@@ -45,13 +32,8 @@ export async function runLoop(maxIter: number): Promise<number> {
 
     dispatchEvent('on-start', startPayload(beforeTicket))
 
-    if (ralphContainerRunning()) {
-      console.error("Error: Container 'ralph' is already running. Run 'ralph stop' to stop it.")
-      return 1
-    }
-    removeExitedRalphContainer()
-
-    const exit = runRalphContainer({ loop: true })
+    const exit = await runRalphContainer()
+    checkpointCommit()
 
     const after = readTickets(state.tickets)
     const afterTicket = beforeId != null ? after.tickets.find(t => t.id === beforeId) : undefined
