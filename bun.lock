@@ -8,6 +8,7 @@
         "@ai-hero/sandcastle": "^0.4.8",
         "env-paths": "^4.0.0",
         "jimkit-cli": "^0.1.0",
+        "yaml": "^2.8.3",
       },
       "devDependencies": {
         "@types/node": "^22.0.0",

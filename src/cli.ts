@@ -35,6 +35,7 @@ const cli = defineCLI({
       ticketIds: { cmd: 'ralph tickets --ids-only all', label: 'tickets' },
       hookNames: { cmd: 'ralph hooks list --names-only', label: 'hooks' },
       refNames: { cmd: 'ralph refs list --names-only', label: 'refs' },
+      refTags: { cmd: 'ralph refs list --tags-only', label: 'tags' },
     },
     static: {
       events: [...VALID_EVENTS],
@@ -117,7 +118,10 @@ const cli = defineCLI({
             global: { type: 'boolean', description: 'Only global refs' },
             project: { type: 'boolean', description: 'Only project refs' },
             all: { type: 'boolean', description: 'Show both scopes, mark shadowed' },
+            tag: { type: 'string[]', description: 'Filter by frontmatter tag (repeat for multiple; AND by default)', completeWith: 'refTags' },
+            any: { type: 'boolean', description: 'When multiple --tag values are given, match ANY instead of ALL' },
             namesOnly: { type: 'boolean', description: 'Print deduped names only (for completions)' },
+            tagsOnly: { type: 'boolean', description: 'Print deduped tags only (for completions)' },
           },
         },
         show: {
@@ -198,10 +202,12 @@ cli.run(process.argv, {
     return hooksCmds.remove(event.value, args.name)
   },
   'refs.list': (_args, opts) => {
-    if (opts.namesOnly) return refsCmds.listNames()
+    if (opts.tagsOnly) return refsCmds.listTags()
+    const tags = { tags: opts.tag ?? [], any: opts.any ?? false }
+    if (opts.namesOnly) return refsCmds.listNames(tags)
     const filter = pickScopeFilter(opts)
     if (!filter.ok) return filter
-    return refsCmds.list(filter.value)
+    return refsCmds.list(filter.value, tags)
   },
   'refs.show': (args, opts) => {
     const scope = pickScope(opts)

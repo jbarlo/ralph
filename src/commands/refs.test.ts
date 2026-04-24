@@ -182,4 +182,70 @@ describe('refs commands', () => {
     expect(value(refs.show('patterns/result-type'))).toBe('body')
     expect(value(refs.list('project'))).toBe('patterns/result-type')
   })
+
+  // tag filtering
+
+  const withTags = (tags: string[], body: string) =>
+    `---\ntags: [${tags.map(t => `"${t}"`).join(', ')}]\n---\n${body}`
+
+  it('list with a single tag filters to matching refs', () => {
+    writeGlobal('arch', withTags(['architecture'], 'a'))
+    writeGlobal('logging', withTags(['philosophy'], 'l'))
+    writeProj('dal', withTags(['architecture', 'persistence'], 'd'))
+    const out = value(refs.list(undefined, { tags: ['architecture'], any: false }))
+    expect(out).toBe('arch\t[global]\ndal\t[project]')
+  })
+
+  it('list with multiple tags defaults to AND (all must match)', () => {
+    writeGlobal('a', withTags(['architecture'], ''))
+    writeGlobal('b', withTags(['architecture', 'persistence'], ''))
+    writeGlobal('c', withTags(['persistence'], ''))
+    const out = value(refs.list('global', { tags: ['architecture', 'persistence'], any: false }))
+    expect(out).toBe('b')
+  })
+
+  it('list with any=true switches to OR semantics', () => {
+    writeGlobal('a', withTags(['architecture'], ''))
+    writeGlobal('b', withTags(['persistence'], ''))
+    writeGlobal('c', withTags(['unrelated'], ''))
+    const out = value(refs.list('global', { tags: ['architecture', 'persistence'], any: true }))
+    expect(out).toBe('a\nb')
+  })
+
+  it('list excludes refs without a tags frontmatter block when filter is active', () => {
+    writeGlobal('tagged', withTags(['x'], ''))
+    writeGlobal('untagged', 'body with no frontmatter')
+    expect(value(refs.list('global', { tags: ['x'], any: false }))).toBe('tagged')
+  })
+
+  it('list ignores the filter when no tags are requested (default behavior preserved)', () => {
+    writeGlobal('a', 'body')
+    writeGlobal('b', withTags(['x'], ''))
+    const out = value(refs.list('global', { tags: [], any: false }))
+    expect(out).toBe('a\nb')
+  })
+
+  it('list tolerates malformed frontmatter (treats ref as untagged)', () => {
+    writeGlobal('broken', '---\ntags: {oops\n---\nbody')
+    writeGlobal('ok', withTags(['x'], ''))
+    expect(value(refs.list('global', { tags: ['x'], any: false }))).toBe('ok')
+  })
+
+  it('listNames honors the tag filter (for completions)', () => {
+    writeGlobal('a', withTags(['x'], ''))
+    writeProj('b', withTags(['y'], ''))
+    expect(value(refs.listNames({ tags: ['x'], any: false }))).toBe('a')
+  })
+
+  it('listTags returns the deduped union of tags across both scopes', () => {
+    writeGlobal('a', withTags(['architecture', 'persistence'], ''))
+    writeProj('b', withTags(['persistence', 'philosophy'], ''))
+    expect(value(refs.listTags())).toBe('architecture\npersistence\nphilosophy')
+  })
+
+  it('listTags returns empty when no refs have tags', () => {
+    writeGlobal('a', 'body')
+    writeProj('b', 'body')
+    expect(value(refs.listTags())).toBe('')
+  })
 })

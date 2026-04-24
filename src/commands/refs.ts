@@ -1,10 +1,15 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
+import { parse as yamlParse } from 'yaml'
 import { globalRefsDir, projectRefsDir } from '../refs-dir.js'
 import { ok, err, type Result } from '../lib/result.js'
 
 export type Scope = 'global' | 'project'
 export type ScopeFilter = Scope | 'all' | undefined
+
+export type TagFilter = { tags: string[]; any: boolean }
+
+const NO_FILTER: TagFilter = { tags: [], any: false }
 
 function scopeDir(scope: Scope, cwd: string): string {
   return scope === 'global' ? globalRefsDir() : projectRefsDir(cwd)
@@ -39,6 +44,40 @@ function refsInDir(dir: string): Map<string, string> {
   return result
 }
 
+function parseFrontmatter(content: string): { tags: string[] } {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/)
+  if (!match) return { tags: [] }
+  try {
+    const parsed = yamlParse(match[1]) as { tags?: unknown } | null | undefined
+    const raw = parsed?.tags
+    const tags = Array.isArray(raw) ? raw.filter((t): t is string => typeof t === 'string') : []
+    return { tags }
+  } catch {
+    return { tags: [] }
+  }
+}
+
+function refTags(filepath: string): string[] {
+  try {
+    return parseFrontmatter(readFileSync(filepath, 'utf8')).tags
+  } catch {
+    return []
+  }
+}
+
+function filterByTags(refs: Map<string, string>, filter: TagFilter): Map<string, string> {
+  if (filter.tags.length === 0) return refs
+  const out = new Map<string, string>()
+  for (const [name, file] of refs) {
+    const tags = new Set(refTags(file))
+    const matches = filter.any
+      ? filter.tags.some(t => tags.has(t))
+      : filter.tags.every(t => tags.has(t))
+    if (matches) out.set(name, file)
+  }
+  return out
+}
+
 function resolveRef(name: string, scope: Scope | undefined, cwd: string): Result<string, string> {
   if (scope) {
     const path = join(scopeDir(scope, cwd), `${name}.md`)
@@ -62,8 +101,9 @@ function readRefFile(path: string): Result<string, string> {
 }
 
 export type RefsCommands = {
-  list(filter: ScopeFilter): Result<string, string>
-  listNames(): Result<string, string>
+  list(filter: ScopeFilter, tags?: TagFilter): Result<string, string>
+  listNames(tags?: TagFilter): Result<string, string>
+  listTags(): Result<string, string>
   show(name: string, scope?: Scope): Result<string, string>
   path(name: string, scope?: Scope): Result<string, string>
   shadowed(): Result<string, string>
@@ -72,9 +112,9 @@ export type RefsCommands = {
 
 export function makeRefsCommands(cwd: string = process.cwd()): RefsCommands {
   return {
-    list(filter) {
-      const proj = refsInDir(projectRefsDir(cwd))
-      const glob = refsInDir(globalRefsDir())
+    list(filter, tags = NO_FILTER) {
+      const proj = filterByTags(refsInDir(projectRefsDir(cwd)), tags)
+      const glob = filterByTags(refsInDir(globalRefsDir()), tags)
       if (filter === 'project') return ok([...proj.keys()].sort().join('\n'))
       if (filter === 'global') return ok([...glob.keys()].sort().join('\n'))
       if (filter === 'all') {
@@ -93,11 +133,17 @@ export function makeRefsCommands(cwd: string = process.cwd()): RefsCommands {
         .map(([name, scope]) => `${name}\t[${scope}]`)
         .join('\n'))
     },
-    listNames() {
-      const names = new Set<string>()
-      for (const n of refsInDir(projectRefsDir(cwd)).keys()) names.add(n)
-      for (const n of refsInDir(globalRefsDir()).keys()) names.add(n)
+    listNames(tags = NO_FILTER) {
+      const proj = filterByTags(refsInDir(projectRefsDir(cwd)), tags)
+      const glob = filterByTags(refsInDir(globalRefsDir()), tags)
+      const names = new Set<string>([...proj.keys(), ...glob.keys()])
       return ok([...names].sort().join('\n'))
+    },
+    listTags() {
+      const tags = new Set<string>()
+      for (const file of refsInDir(projectRefsDir(cwd)).values()) for (const t of refTags(file)) tags.add(t)
+      for (const file of refsInDir(globalRefsDir()).values()) for (const t of refTags(file)) tags.add(t)
+      return ok([...tags].sort().join('\n'))
     },
     show(name, scope) {
       const resolved = resolveRef(name, scope, cwd)
