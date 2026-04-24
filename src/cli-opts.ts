@@ -1,5 +1,6 @@
 import type { Scope, ScopeFilter } from './commands/refs.js'
 import type { TicketsMode } from './commands/tickets.js'
+import { type HookEvent, VALID_EVENTS } from './commands/hooks.js'
 import { ok, err, type Result } from './lib/result.js'
 
 const MODE_ALIAS: Record<string, TicketsMode> = {
@@ -15,6 +16,11 @@ export function parseTicketsMode(input: string | undefined): Result<TicketsMode,
   const mode = MODE_ALIAS[key]
   if (!mode) return err(`Unknown tickets mode: ${input}`, 1)
   return ok(mode)
+}
+
+export function parseHookEvent(input: string): Result<HookEvent, string> {
+  if ((VALID_EVENTS as readonly string[]).includes(input)) return ok(input as HookEvent)
+  return err(`Invalid event '${input}'. Valid: ${VALID_EVENTS.join(', ')}`, 1)
 }
 
 export function pickScope(opts: { global?: boolean; project?: boolean }): Result<Scope | undefined, string> {

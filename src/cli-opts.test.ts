@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { pickScope, pickScopeFilter, parseTicketsMode } from './cli-opts.js'
+import { pickScope, pickScopeFilter, parseTicketsMode, parseHookEvent } from './cli-opts.js'
 
 describe('pickScope', () => {
   it('returns the selected scope', () => {
@@ -72,6 +72,24 @@ describe('parseTicketsMode', () => {
     expect(r.ok).toBe(false)
     if (!r.ok) {
       expect(r.error).toMatch(/Unknown tickets mode: bogus/)
+      expect(r.exitCode).toBe(1)
+    }
+  })
+})
+
+describe('parseHookEvent', () => {
+  it('accepts every valid event', () => {
+    for (const ev of ['on-start', 'on-complete', 'on-error']) {
+      expect(parseHookEvent(ev)).toEqual({ ok: true, value: ev })
+    }
+  })
+
+  it('returns err with the full valid list on unknown input', () => {
+    const r = parseHookEvent('on-bogus')
+    expect(r.ok).toBe(false)
+    if (!r.ok) {
+      expect(r.error).toMatch(/Invalid event 'on-bogus'/)
+      expect(r.error).toMatch(/on-start, on-complete, on-error/)
       expect(r.exitCode).toBe(1)
     }
   })

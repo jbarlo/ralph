@@ -4,9 +4,9 @@ import { addTicket } from './commands/add.js'
 import { listTickets } from './commands/tickets.js'
 import { initProject } from './commands/init.js'
 import { printOrchestrator } from './commands/orchestrator.js'
-import { listAll, listEvent, listNames, addHook, removeHook, isValidEvent, VALID_EVENTS } from './commands/hooks.js'
+import { makeHooksCommands, VALID_EVENTS } from './commands/hooks.js'
 import { makeRefsCommands } from './commands/refs.js'
-import { pickScope, pickScopeFilter, parseTicketsMode } from './cli-opts.js'
+import { pickScope, pickScopeFilter, parseTicketsMode, parseHookEvent } from './cli-opts.js'
 import { runLoop } from './loop.js'
 import { runOnce } from './once.js'
 import { spawnSync } from 'node:child_process'
@@ -14,9 +14,7 @@ import { ralphDir } from './ralph-dir.js'
 
 const completionsBuiltin = builtins.completions()
 const refsCmds = makeRefsCommands()
-
-const invalidEvent = (event: string) =>
-  err(`Invalid event '${event}'. Valid: ${VALID_EVENTS.join(', ')}`, 1)
+const hooksCmds = makeHooksCommands()
 
 const cli = defineCLI({
   name: 'ralph',
@@ -183,20 +181,21 @@ cli.run(process.argv, {
     return ok(undefined)
   },
   'hooks.list': (args, opts) => {
-    if (opts.namesOnly) return ok(listNames())
-    if (args.event) {
-      if (!isValidEvent(args.event)) return invalidEvent(args.event)
-      return ok(listEvent(args.event))
-    }
-    return ok(listAll())
+    if (opts.namesOnly) return hooksCmds.listNames()
+    if (!args.event) return hooksCmds.list()
+    const event = parseHookEvent(args.event)
+    if (!event.ok) return event
+    return hooksCmds.list(event.value)
   },
   'hooks.add': (args) => {
-    if (!isValidEvent(args.event)) return invalidEvent(args.event)
-    return ok(addHook(args.event, args.script))
+    const event = parseHookEvent(args.event)
+    if (!event.ok) return event
+    return hooksCmds.add(event.value, args.script)
   },
   'hooks.rm': (args) => {
-    if (!isValidEvent(args.event)) return invalidEvent(args.event)
-    return ok(removeHook(args.event, args.name))
+    const event = parseHookEvent(args.event)
+    if (!event.ok) return event
+    return hooksCmds.remove(event.value, args.name)
   },
   'refs.list': (_args, opts) => {
     if (opts.namesOnly) return refsCmds.listNames()
