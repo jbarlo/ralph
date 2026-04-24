@@ -1,16 +1,14 @@
-import { readFileSync, existsSync } from 'node:fs'
 import { resolveState } from './state.js'
 import { readTickets, pickNext, remaining } from './tickets.js'
 import { runRalphContainer } from './sandcastle.js'
 import { inGitRepo, currentCommit, checkpointCommit } from './git.js'
 import { dispatchEvent } from './hooks-dispatch.js'
-import { startPayload, completePayload, errorPayload, extractLastProgressEntry } from './hooks-payloads.js'
+import { startPayload, completePayload, errorPayload } from './hooks-payloads.js'
+import { readProgressSummary } from './progress.js'
+import { ok, err, type Result } from './lib/result.js'
 
-export async function runLoop(maxIter: number): Promise<number> {
-  if (!inGitRepo()) {
-    console.error('Error: ralph must run inside a git repository')
-    return 1
-  }
+export async function runLoop(maxIter: number): Promise<Result<string, string>> {
+  if (!inGitRepo()) return err('ralph must run inside a git repository', 1)
 
   console.log(`Starting ralph loop (max ${maxIter} iterations)...`)
 
@@ -20,19 +18,15 @@ export async function runLoop(maxIter: number): Promise<number> {
 
     const state = resolveState()
     const fileR = readTickets(state.tickets)
-    if (!fileR.ok) {
-      console.error(fileR.error)
-      return 1
-    }
-    const file = fileR.value
+    if (!fileR.ok) return fileR
 
-    if (remaining(file) === 0) {
+    if (remaining(fileR.value) === 0) {
       console.log('All tickets complete!')
-      return 0
+      return ok('')
     }
-    console.log(`Remaining tickets: ${remaining(file)}`)
+    console.log(`Remaining tickets: ${remaining(fileR.value)}`)
 
-    const beforeTicket = pickNext(file)
+    const beforeTicket = pickNext(fileR.value)
     const beforeId = beforeTicket?.id
 
     dispatchEvent('on-start', startPayload(beforeTicket))
@@ -41,18 +35,14 @@ export async function runLoop(maxIter: number): Promise<number> {
     checkpointCommit()
 
     const afterR = readTickets(state.tickets)
-    if (!afterR.ok) {
-      console.error(afterR.error)
-      return 1
-    }
+    if (!afterR.ok) return afterR
     const afterTicket = beforeId != null ? afterR.value.tickets.find(t => t.id === beforeId) : undefined
     const commit = currentCommit()
 
     if (exit === 0 && afterTicket?.status === 'completed') {
-      const summary = existsSync(state.progress)
-        ? extractLastProgressEntry(readFileSync(state.progress, 'utf8'))
-        : ''
-      dispatchEvent('on-complete', completePayload(afterTicket, summary, commit))
+      const summaryR = readProgressSummary(state.progress)
+      if (!summaryR.ok) return summaryR
+      dispatchEvent('on-complete', completePayload(afterTicket, summaryR.value, commit))
     } else if (beforeId != null) {
       dispatchEvent('on-error', errorPayload(afterTicket ?? beforeTicket, exit, commit))
     }
@@ -61,5 +51,5 @@ export async function runLoop(maxIter: number): Promise<number> {
   console.log('')
   console.log(`=== Max iterations (${maxIter}) reached ===`)
   console.log('Some tickets may still be incomplete.')
-  return 0
+  return ok('')
 }

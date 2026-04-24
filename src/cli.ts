@@ -11,10 +11,19 @@ import { runLoop } from './loop.js'
 import { runOnce } from './once.js'
 import { spawnSync } from 'node:child_process'
 import { ralphDir } from './ralph-dir.js'
+import { type Result } from './lib/result.js'
 
 const completionsBuiltin = builtins.completions()
 const refsCmds = makeRefsCommands()
 const hooksCmds = makeHooksCommands()
+
+function exitOnErr(r: Result<string, string>): Result<string, string> {
+  if (!r.ok) {
+    if (r.error) console.error(r.error)
+    process.exit(r.exitCode ?? 1)
+  }
+  return r
+}
 
 const cli = defineCLI({
   name: 'ralph',
@@ -148,16 +157,8 @@ const cli = defineCLI({
 })
 
 cli.run(process.argv, {
-  loop: async (args) => {
-    const code = await runLoop(args.maxIter ?? 20)
-    if (code !== 0) process.exit(code)
-    return ok(undefined)
-  },
-  once: async () => {
-    const code = await runOnce()
-    if (code !== 0) process.exit(code)
-    return ok(undefined)
-  },
+  loop: async (args) => exitOnErr(await runLoop(args.maxIter ?? 20)),
+  once: async () => exitOnErr(await runOnce()),
   init: () => {
     const r = initProject()
     if (!r.ok) return r
@@ -177,8 +178,7 @@ cli.run(process.argv, {
   },
   build: () => {
     const r = spawnSync('podman', ['build', '-t', 'ralph', ralphDir()], { stdio: 'inherit' })
-    if (r.status !== 0) process.exit(r.status ?? 1)
-    return ok(undefined)
+    return exitOnErr(r.status === 0 ? ok('') : err('', r.status ?? 1))
   },
   'hooks.list': (args, opts) => {
     if (opts.namesOnly) return hooksCmds.listNames()
