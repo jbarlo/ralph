@@ -28,7 +28,7 @@ ralph build              # builds the container image
 
 ```sh
 cd my-project
-ralph init               # scaffold .ralph/, RALPH.md, flake.nix
+ralph init               # scaffold .ralph/, flake.nix
 ralph add "..." -p 5 -d "..."  # add a ticket
 ralph tickets            # list pending
 ralph once               # run one ticket
@@ -41,7 +41,6 @@ ralph orchestrator       # print planner instructions (pipe into outer claude se
 - `.ralph/tickets.json` — queue
 - `.ralph/progress.txt` — append-only log
 - `.ralph/hooks.d/{on-start,on-complete,on-error}/` — lifecycle hooks
-- `RALPH.md` — executor instructions (read by inner claude via the prompt)
 - `flake.nix` — per-project devshell activated inside the container via the image's `claude` wrapper
 
 ## Shell completions
