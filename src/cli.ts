@@ -5,6 +5,7 @@ import { listTickets, parseMode } from './commands/tickets.js'
 import { initProject } from './commands/init.js'
 import { printOrchestrator } from './commands/orchestrator.js'
 import { listAll, listEvent, listNames, addHook, removeHook, isValidEvent, VALID_EVENTS } from './commands/hooks.js'
+import * as refs from './commands/refs.js'
 import { runLoop } from './loop.js'
 import { runOnce } from './once.js'
 import { spawnSync } from 'node:child_process'
@@ -24,6 +25,7 @@ const cli = defineCLI({
     dynamic: {
       ticketIds: { cmd: 'ralph tickets --ids-only all', label: 'tickets' },
       hookNames: { cmd: 'ralph hooks list --names-only', label: 'hooks' },
+      refNames: { cmd: 'ralph refs list --names-only', label: 'refs' },
     },
     static: {
       events: [...VALID_EVENTS],
@@ -97,6 +99,43 @@ const cli = defineCLI({
         },
       },
     },
+    refs: {
+      description: 'Read global + project reference docs',
+      subcommands: {
+        list: {
+          description: 'List refs (merged, project wins)',
+          options: {
+            global: { type: 'boolean', description: 'Only global refs' },
+            project: { type: 'boolean', description: 'Only project refs' },
+            all: { type: 'boolean', description: 'Show both scopes, mark shadowed' },
+            namesOnly: { type: 'boolean', description: 'Print deduped names only (for completions)' },
+          },
+        },
+        show: {
+          description: 'Print ref content to stdout',
+          args: {
+            name: { type: 'string', required: true, completeWith: 'refNames' },
+          },
+          options: {
+            global: { type: 'boolean', description: 'Force global scope' },
+            project: { type: 'boolean', description: 'Force project scope' },
+          },
+        },
+        path: {
+          description: 'Print absolute path of a ref',
+          args: {
+            name: { type: 'string', required: true, completeWith: 'refNames' },
+          },
+          options: {
+            global: { type: 'boolean', description: 'Force global scope' },
+            project: { type: 'boolean', description: 'Force project scope' },
+          },
+        },
+        shadowed: {
+          description: 'List project refs that shadow a same-name global ref',
+        },
+      },
+    },
     completions: completionsBuiltin.command,
   },
 })
@@ -145,6 +184,13 @@ cli.run(process.argv, {
     if (!isValidEvent(args.event)) return invalidEvent(args.event)
     return ok(removeHook(args.event, args.name))
   },
+  'refs.list': (_args, opts) => {
+    if (opts.namesOnly) return ok(refs.listNames())
+    return ok(refs.list(refs.pickScopeFilter(opts)))
+  },
+  'refs.show': (args, opts) => ok(refs.show(args.name, refs.pickScope(opts))),
+  'refs.path': (args, opts) => ok(refs.refPath(args.name, refs.pickScope(opts))),
+  'refs.shadowed': () => ok(refs.shadowed()),
   completions: (args) =>
     ok(cli.completion(args.shell as 'bash' | 'zsh' | 'fish')),
 })

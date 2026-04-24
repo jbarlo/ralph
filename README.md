@@ -34,7 +34,18 @@ ralph tickets            # list pending
 ralph once               # run one ticket
 ralph loop [n]           # run up to n iterations (default 20)
 ralph orchestrator       # print planner instructions (pipe into outer claude session)
+ralph refs list          # list reference docs (project wins over global)
+ralph refs show <name>   # print a reference doc (use --global / --project to force scope)
 ```
+
+## Reference docs
+
+Portable snippets the executor can pull in via `ralph refs show <name>`.
+
+- **Global:** `${XDG_CONFIG_HOME}/ralph/refs/*.md` (platform-appropriate, via `env-paths`)
+- **Project:** `.ralph/refs/*.md`
+
+Project refs shadow global refs of the same name. Ref names are the posix-style relative path minus `.md`, so nested dirs work (`ralph refs show patterns/result-type`). Use `ralph refs shadowed` to surface silent overrides.
 
 ## Files scaffolded per-project
 
