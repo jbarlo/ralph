@@ -3,6 +3,7 @@ import { defineCLI, ok, err, builtins } from 'jimkit-cli'
 import { addTicket } from './commands/add.js'
 import { listTickets, parseMode } from './commands/tickets.js'
 import { initProject } from './commands/init.js'
+import { printOrchestrator } from './commands/orchestrator.js'
 import { listAll, listEvent, listNames, addHook, removeHook, isValidEvent, VALID_EVENTS } from './commands/hooks.js'
 import { runLoop } from './loop.js'
 import { runOnce } from './once.js'
@@ -42,6 +43,9 @@ const cli = defineCLI({
     },
     init: {
       description: 'Scaffold .ralph/ state directory in current project',
+    },
+    orchestrator: {
+      description: 'Print orchestrator (planner) instructions to stdout',
     },
     add: {
       description: 'Add a ticket',
@@ -115,6 +119,7 @@ cli.run(process.argv, {
     lines.push('Ready for ralph. Add tickets with: ralph add "title" [-p priority] [-d description]')
     return ok(lines.join('\n'))
   },
+  orchestrator: () => ok(printOrchestrator()),
   add: (args, opts) =>
     ok(addTicket(args.title, opts.priority, opts.description)),
   tickets: (args, opts) =>

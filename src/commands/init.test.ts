@@ -23,7 +23,6 @@ describe('initProject', () => {
     expect(existsSync(join(path, '.ralph/hooks.d/on-start'))).toBe(true)
     expect(existsSync(join(path, '.ralph/hooks.d/on-complete'))).toBe(true)
     expect(existsSync(join(path, '.ralph/hooks.d/on-error'))).toBe(true)
-    expect(existsSync(join(path, '.ralph/orchestrator.md'))).toBe(true)
     expect(existsSync(join(path, 'RALPH.md'))).toBe(true)
     expect(existsSync(join(path, 'flake.nix'))).toBe(true)
     expect(existsSync(join(path, 'CLAUDE.md'))).toBe(false)

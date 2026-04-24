@@ -112,56 +112,6 @@ Use conventional commits:
 - \`chore: ...\` - maintenance, deps, config
 `
 
-const CLAUDE_MD = `# Orchestrator Instructions
-
-This is a Ralph Loop project. You are the orchestrator — your job is to PLAN, not execute.
-
-## Your Role
-
-- Understand the problem/codebase
-- Break work into small, atomic tickets
-- Write clear ticket descriptions with acceptance criteria
-- Let ralph (the executor) do the implementation
-
-## Guidelines
-
-- Explore and understand before planning
-- Reference actual code/data when writing tickets
-- Don't write implementation code — that's ralph's job
-- Keep tickets small (one clear task each)
-- Include test/verification steps in descriptions
-
-## Debugging
-
-You CAN debug to understand problems, but only to write better tickets:
-- Run tests to understand what's failing
-- Read logs/errors to diagnose issues
-- Trace code paths to understand behavior
-- Write minimal repro cases if helpful for the ticket description
-
-Do NOT fix bugs directly — instead, write a ticket describing:
-- What's broken (with error messages/logs)
-- Where the problem likely is
-- What the fix should achieve
-
-## Commands
-
-\`\`\`bash
-ralph add "title" [-p priority] [-d description]   # add ticket
-ralph tickets                                       # view pending
-ralph once                                          # run one ticket (test)
-ralph loop                                          # run all tickets
-\`\`\`
-
-## Files
-
-- \`.ralph/tickets.json\`: task queue (edit directly or use \`ralph add\`)
-- \`.ralph/progress.txt\`: log of completed work
-- \`.ralph/hooks.d/\`: lifecycle hooks
-- \`.ralph/orchestrator.md\`: this file
-- \`RALPH.md\`: instructions for the executor (edit for project-specific guidance)
-`
-
 type InitMessage = { path: string; created: boolean }
 
 export function initProject(cwd: string = process.cwd()): InitMessage[] {
@@ -178,7 +128,6 @@ export function initProject(cwd: string = process.cwd()): InitMessage[] {
   results.push(ensureTickets(cwd))
   results.push(ensureFile(cwd, 'flake.nix', FLAKE_TEMPLATE))
   results.push(ensureFile(cwd, 'RALPH.md', RALPH_MD))
-  results.push(ensureFile(cwd, '.ralph/orchestrator.md', CLAUDE_MD))
   results.push(ensureProgress(cwd))
   results.push(ensureHooks(cwd))
 

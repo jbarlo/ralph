@@ -33,6 +33,7 @@ ralph add "..." -p 5 -d "..."  # add a ticket
 ralph tickets            # list pending
 ralph once               # run one ticket
 ralph loop [n]           # run up to n iterations (default 20)
+ralph orchestrator       # print planner instructions (pipe into outer claude session)
 ```
 
 ## Files scaffolded per-project
@@ -41,7 +42,6 @@ ralph loop [n]           # run up to n iterations (default 20)
 - `.ralph/progress.txt` — append-only log
 - `.ralph/hooks.d/{on-start,on-complete,on-error}/` — lifecycle hooks
 - `RALPH.md` — executor instructions (read by inner claude via the prompt)
-- `.ralph/orchestrator.md` — orchestrator (human's) guide; `@`-include into your outer claude session as needed
 - `flake.nix` — per-project devshell activated inside the container via the image's `claude` wrapper
 
 ## Shell completions
