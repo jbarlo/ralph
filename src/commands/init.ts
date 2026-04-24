@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { ok, err, type Result } from '../lib/result.js'
 
 const FLAKE_TEMPLATE = `{
   inputs = {
@@ -23,55 +24,88 @@ const FLAKE_TEMPLATE = `{
 }
 `
 
-type InitMessage = { path: string; created: boolean }
+export type InitMessage = { path: string; created: boolean }
 
-export function initProject(cwd: string = process.cwd()): InitMessage[] {
+export function initProject(cwd: string = process.cwd()): Result<InitMessage[], string> {
   const results: InitMessage[] = []
 
-  const dotRalph = join(cwd, '.ralph')
-  if (!existsSync(dotRalph)) {
-    mkdirSync(dotRalph)
-    results.push({ path: '.ralph/', created: true })
-  } else {
-    results.push({ path: '.ralph/', created: false })
+  const dotRalph = ensureDir(join(cwd, '.ralph'), '.ralph/')
+  if (!dotRalph.ok) return dotRalph
+  results.push(dotRalph.value)
+
+  for (const step of [
+    () => ensureTickets(cwd),
+    () => ensureFile(cwd, 'flake.nix', FLAKE_TEMPLATE),
+    () => ensureProgress(cwd),
+    () => ensureHooks(cwd),
+  ]) {
+    const r = step()
+    if (!r.ok) return r
+    results.push(r.value)
   }
 
-  results.push(ensureTickets(cwd))
-  results.push(ensureFile(cwd, 'flake.nix', FLAKE_TEMPLATE))
-  results.push(ensureProgress(cwd))
-  results.push(ensureHooks(cwd))
-
-  return results
+  return ok(results)
 }
 
-function ensureTickets(cwd: string): InitMessage {
+function ensureDir(path: string, label: string): Result<InitMessage, string> {
+  if (existsSync(path)) return ok({ path: label, created: false })
+  const r = safeMkdir(path)
+  if (!r.ok) return r
+  return ok({ path: label, created: true })
+}
+
+function ensureTickets(cwd: string): Result<InitMessage, string> {
   const dotTickets = join(cwd, '.ralph/tickets.json')
-  if (existsSync(dotTickets)) return { path: '.ralph/tickets.json', created: false }
-  writeFileSync(dotTickets, JSON.stringify({ tickets: [] }, null, 2) + '\n')
-  return { path: '.ralph/tickets.json', created: true }
+  if (existsSync(dotTickets)) return ok({ path: '.ralph/tickets.json', created: false })
+  const r = safeWriteFile(dotTickets, JSON.stringify({ tickets: [] }, null, 2) + '\n')
+  if (!r.ok) return r
+  return ok({ path: '.ralph/tickets.json', created: true })
 }
 
-function ensureProgress(cwd: string): InitMessage {
+function ensureProgress(cwd: string): Result<InitMessage, string> {
   const dotProgress = join(cwd, '.ralph/progress.txt')
-  if (existsSync(dotProgress)) return { path: '.ralph/progress.txt', created: false }
-  writeFileSync(dotProgress, '# Ralph Progress Log\n')
-  return { path: '.ralph/progress.txt', created: true }
+  if (existsSync(dotProgress)) return ok({ path: '.ralph/progress.txt', created: false })
+  const r = safeWriteFile(dotProgress, '# Ralph Progress Log\n')
+  if (!r.ok) return r
+  return ok({ path: '.ralph/progress.txt', created: true })
 }
 
-function ensureHooks(cwd: string): InitMessage {
+function ensureHooks(cwd: string): Result<InitMessage, string> {
   const dotHooks = join(cwd, '.ralph/hooks.d')
-  if (existsSync(dotHooks)) return { path: '.ralph/hooks.d/', created: false }
+  if (existsSync(dotHooks)) return ok({ path: '.ralph/hooks.d/', created: false })
   for (const ev of ['on-start', 'on-complete', 'on-error']) {
-    mkdirSync(join(dotHooks, ev), { recursive: true })
-    writeFileSync(join(dotHooks, ev, '.gitkeep'), '')
+    const mk = safeMkdir(join(dotHooks, ev), { recursive: true })
+    if (!mk.ok) return mk
+    const gk = safeWriteFile(join(dotHooks, ev, '.gitkeep'), '')
+    if (!gk.ok) return gk
   }
-  return { path: '.ralph/hooks.d/ (on-start, on-complete, on-error)', created: true }
+  return ok({ path: '.ralph/hooks.d/ (on-start, on-complete, on-error)', created: true })
 }
 
-function ensureFile(cwd: string, name: string, content: string): InitMessage {
+function ensureFile(cwd: string, name: string, content: string): Result<InitMessage, string> {
   const path = join(cwd, name)
-  if (existsSync(path)) return { path: name, created: false }
-  mkdirSync(dirname(path), { recursive: true })
-  writeFileSync(path, content)
-  return { path: name, created: true }
+  if (existsSync(path)) return ok({ path: name, created: false })
+  const mk = safeMkdir(dirname(path), { recursive: true })
+  if (!mk.ok) return mk
+  const w = safeWriteFile(path, content)
+  if (!w.ok) return w
+  return ok({ path: name, created: true })
+}
+
+function safeMkdir(path: string, options?: { recursive?: boolean }): Result<void, string> {
+  try {
+    mkdirSync(path, options)
+    return ok(undefined)
+  } catch (e) {
+    return err(`Failed to create ${path}: ${e instanceof Error ? e.message : String(e)}`, 1)
+  }
+}
+
+function safeWriteFile(path: string, content: string): Result<void, string> {
+  try {
+    writeFileSync(path, content)
+    return ok(undefined)
+  } catch (e) {
+    return err(`Failed to write ${path}: ${e instanceof Error ? e.message : String(e)}`, 1)
+  }
 }

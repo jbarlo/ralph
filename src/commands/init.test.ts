@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { existsSync } from 'node:fs'
+import { chmodSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { initProject } from './init.js'
 import { tempDir } from '../test-helpers.js'
@@ -15,7 +15,8 @@ describe('initProject', () => {
     const { path, cleanup } = tempDir()
     cleanupFns.push(cleanup)
 
-    initProject(path)
+    const r = initProject(path)
+    expect(r.ok).toBe(true)
 
     expect(existsSync(join(path, '.ralph'))).toBe(true)
     expect(existsSync(join(path, '.ralph/tickets.json'))).toBe(true)
@@ -25,5 +26,19 @@ describe('initProject', () => {
     expect(existsSync(join(path, '.ralph/hooks.d/on-error'))).toBe(true)
     expect(existsSync(join(path, 'flake.nix'))).toBe(true)
     expect(existsSync(join(path, 'CLAUDE.md'))).toBe(false)
+  })
+
+  it('returns err when the target directory is unwritable', () => {
+    const { path, cleanup } = tempDir()
+    cleanupFns.push(cleanup)
+    chmodSync(path, 0o500)
+    cleanupFns.unshift(() => chmodSync(path, 0o700))
+
+    const r = initProject(path)
+    expect(r.ok).toBe(false)
+    if (!r.ok) {
+      expect(r.error).toMatch(/Failed to (create|write)/)
+      expect(r.exitCode).toBe(1)
+    }
   })
 })

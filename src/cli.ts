@@ -161,8 +161,10 @@ cli.run(process.argv, {
     return ok(undefined)
   },
   init: () => {
-    const lines = initProject().map(r =>
-      r.created ? `Created ${r.path}` : `${r.path} already exists`,
+    const r = initProject()
+    if (!r.ok) return r
+    const lines = r.value.map(m =>
+      m.created ? `Created ${m.path}` : `${m.path} already exists`,
     )
     lines.push('Ready for ralph. Add tickets with: ralph add "title" [-p priority] [-d description]')
     return ok(lines.join('\n'))
