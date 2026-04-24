@@ -17,7 +17,9 @@ describe('addTicket', () => {
     mkdirSync(join(path, '.ralph'))
     writeFileSync(join(path, '.ralph/tickets.json'), '{"tickets":[]}')
 
-    addTicket('Test ticket', 5, 'Test description', path)
+    const r = addTicket('Test ticket', 5, 'Test description', path)
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.value).toMatch(/Added #1/)
 
     const file = JSON.parse(readFileSync(join(path, '.ralph/tickets.json'), 'utf8'))
     expect(file.tickets).toHaveLength(1)

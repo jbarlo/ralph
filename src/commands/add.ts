@@ -1,11 +1,19 @@
 import { resolveState } from '../state.js'
 import { readTickets, writeTickets, nextId } from '../tickets.js'
+import { ok, type Result } from '../lib/result.js'
 
-export function addTicket(title: string, priority: number, description: string, cwd?: string): string {
+export function addTicket(
+  title: string,
+  priority: number,
+  description: string,
+  cwd?: string,
+): Result<string, string> {
   const { tickets: path } = resolveState(cwd)
   const file = readTickets(path)
-  const id = nextId(file)
-  file.tickets.push({ id, title, description, status: 'pending', priority })
-  writeTickets(path, file)
-  return `Added #${id}: ${title} (priority: ${priority})`
+  if (!file.ok) return file
+  const id = nextId(file.value)
+  file.value.tickets.push({ id, title, description, status: 'pending', priority })
+  const write = writeTickets(path, file.value)
+  if (!write.ok) return write
+  return ok(`Added #${id}: ${title} (priority: ${priority})`)
 }

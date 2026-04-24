@@ -13,8 +13,12 @@ export async function runOnce(): Promise<number> {
   }
 
   const state = resolveState()
-  const before = readTickets(state.tickets)
-  const beforeTicket = pickNext(before)
+  const beforeR = readTickets(state.tickets)
+  if (!beforeR.ok) {
+    console.error(beforeR.error)
+    return 1
+  }
+  const beforeTicket = pickNext(beforeR.value)
   const beforeId = beforeTicket?.id
 
   dispatchEvent('on-start', startPayload(beforeTicket))
@@ -22,8 +26,12 @@ export async function runOnce(): Promise<number> {
   const exit = await runRalphContainer()
   checkpointCommit()
 
-  const after = readTickets(state.tickets)
-  const afterTicket = beforeId != null ? after.tickets.find(t => t.id === beforeId) : undefined
+  const afterR = readTickets(state.tickets)
+  if (!afterR.ok) {
+    console.error(afterR.error)
+    return 1
+  }
+  const afterTicket = beforeId != null ? afterR.value.tickets.find(t => t.id === beforeId) : undefined
   const commit = currentCommit()
 
   if (exit === 0 && afterTicket?.status === 'completed') {

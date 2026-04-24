@@ -19,7 +19,12 @@ export async function runLoop(maxIter: number): Promise<number> {
     console.log(`=== Iteration ${i}/${maxIter} ===`)
 
     const state = resolveState()
-    const file = readTickets(state.tickets)
+    const fileR = readTickets(state.tickets)
+    if (!fileR.ok) {
+      console.error(fileR.error)
+      return 1
+    }
+    const file = fileR.value
 
     if (remaining(file) === 0) {
       console.log('All tickets complete!')
@@ -35,8 +40,12 @@ export async function runLoop(maxIter: number): Promise<number> {
     const exit = await runRalphContainer()
     checkpointCommit()
 
-    const after = readTickets(state.tickets)
-    const afterTicket = beforeId != null ? after.tickets.find(t => t.id === beforeId) : undefined
+    const afterR = readTickets(state.tickets)
+    if (!afterR.ok) {
+      console.error(afterR.error)
+      return 1
+    }
+    const afterTicket = beforeId != null ? afterR.value.tickets.find(t => t.id === beforeId) : undefined
     const commit = currentCommit()
 
     if (exit === 0 && afterTicket?.status === 'completed') {

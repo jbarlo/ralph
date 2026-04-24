@@ -169,9 +169,9 @@ cli.run(process.argv, {
   },
   orchestrator: () => ok(printOrchestrator()),
   add: (args, opts) =>
-    ok(addTicket(args.title, opts.priority, opts.description)),
+    addTicket(args.title, opts.priority, opts.description),
   tickets: (args, opts) =>
-    ok(listTickets(parseMode(args.mode), opts.idsOnly ?? false)),
+    listTickets(parseMode(args.mode), opts.idsOnly ?? false),
   build: () => {
     const r = spawnSync('podman', ['build', '-t', 'ralph', ralphDir()], { stdio: 'inherit' })
     if (r.status !== 0) process.exit(r.status ?? 1)

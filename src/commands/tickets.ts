@@ -1,5 +1,6 @@
 import { resolveState } from '../state.js'
 import { readTickets, type Ticket, type TicketStatus } from '../tickets.js'
+import { ok, type Result } from '../lib/result.js'
 
 export type TicketsMode = 'pending' | 'done' | 'failed' | 'draft' | 'all'
 
@@ -18,9 +19,15 @@ export function parseMode(input: string | undefined): TicketsMode {
   return mode
 }
 
-export function listTickets(mode: TicketsMode, idsOnly = false, cwd?: string): string {
+export function listTickets(
+  mode: TicketsMode,
+  idsOnly = false,
+  cwd?: string,
+): Result<string, string> {
   const { tickets: path } = resolveState(cwd)
-  const file = readTickets(path)
+  const fileR = readTickets(path)
+  if (!fileR.ok) return fileR
+  const file = fileR.value
   let filtered: Ticket[]
   switch (mode) {
     case 'pending':
@@ -39,8 +46,8 @@ export function listTickets(mode: TicketsMode, idsOnly = false, cwd?: string): s
       filtered = file.tickets
       break
   }
-  if (idsOnly) return filtered.map(t => String(t.id)).join('\n')
-  return filtered.map(t => formatTicket(t, mode)).join('\n')
+  if (idsOnly) return ok(filtered.map(t => String(t.id)).join('\n'))
+  return ok(filtered.map(t => formatTicket(t, mode)).join('\n'))
 }
 
 function formatTicket(t: Ticket, mode: TicketsMode): string {

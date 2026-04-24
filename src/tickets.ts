@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { ok, err, type Result } from './lib/result.js'
 
 export type TicketStatus = 'draft' | 'pending' | 'in_progress' | 'completed' | 'failed'
 
@@ -12,13 +13,28 @@ export type Ticket = {
 
 export type TicketsFile = { tickets: Ticket[] }
 
-export function readTickets(path: string): TicketsFile {
-  if (!existsSync(path)) return { tickets: [] }
-  return JSON.parse(readFileSync(path, 'utf8'))
+export function readTickets(path: string): Result<TicketsFile, string> {
+  if (!existsSync(path)) return ok({ tickets: [] })
+  let raw: string
+  try {
+    raw = readFileSync(path, 'utf8')
+  } catch (e) {
+    return err(`Failed to read ${path}: ${e instanceof Error ? e.message : String(e)}`, 1)
+  }
+  try {
+    return ok(JSON.parse(raw) as TicketsFile)
+  } catch (e) {
+    return err(`Failed to parse ${path}: ${e instanceof Error ? e.message : String(e)}`, 1)
+  }
 }
 
-export function writeTickets(path: string, data: TicketsFile): void {
-  writeFileSync(path, JSON.stringify(data, null, 2) + '\n')
+export function writeTickets(path: string, data: TicketsFile): Result<void, string> {
+  try {
+    writeFileSync(path, JSON.stringify(data, null, 2) + '\n')
+    return ok(undefined)
+  } catch (e) {
+    return err(`Failed to write ${path}: ${e instanceof Error ? e.message : String(e)}`, 1)
+  }
 }
 
 export function nextId(file: TicketsFile): number {

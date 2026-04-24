@@ -22,7 +22,8 @@ describe('listTickets', () => {
       }),
     )
 
-    const out = listTickets('pending', false, path)
-    expect(out).toContain('Test')
+    const r = listTickets('pending', false, path)
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.value).toContain('Test')
   })
 })
