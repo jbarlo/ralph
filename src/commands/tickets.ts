@@ -4,21 +4,6 @@ import { ok, type Result } from '../lib/result.js'
 
 export type TicketsMode = 'pending' | 'done' | 'failed' | 'draft' | 'all'
 
-const MODE_ALIAS: Record<string, TicketsMode> = {
-  pending: 'pending', p: 'pending',
-  done: 'done', d: 'done',
-  failed: 'failed', f: 'failed',
-  draft: 'draft', dr: 'draft',
-  all: 'all', a: 'all',
-}
-
-export function parseMode(input: string | undefined): TicketsMode {
-  const key = (input ?? 'pending').toLowerCase()
-  const mode = MODE_ALIAS[key]
-  if (!mode) throw new Error(`Unknown mode: ${input}`)
-  return mode
-}
-
 export function listTickets(
   mode: TicketsMode,
   idsOnly = false,

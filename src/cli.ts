@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 import { defineCLI, ok, err, builtins } from 'jimkit-cli'
 import { addTicket } from './commands/add.js'
-import { listTickets, parseMode } from './commands/tickets.js'
+import { listTickets } from './commands/tickets.js'
 import { initProject } from './commands/init.js'
 import { printOrchestrator } from './commands/orchestrator.js'
 import { listAll, listEvent, listNames, addHook, removeHook, isValidEvent, VALID_EVENTS } from './commands/hooks.js'
 import { makeRefsCommands } from './commands/refs.js'
-import { pickScope, pickScopeFilter } from './cli-opts.js'
+import { pickScope, pickScopeFilter, parseTicketsMode } from './cli-opts.js'
 import { runLoop } from './loop.js'
 import { runOnce } from './once.js'
 import { spawnSync } from 'node:child_process'
@@ -170,8 +170,11 @@ cli.run(process.argv, {
   orchestrator: () => ok(printOrchestrator()),
   add: (args, opts) =>
     addTicket(args.title, opts.priority, opts.description),
-  tickets: (args, opts) =>
-    listTickets(parseMode(args.mode), opts.idsOnly ?? false),
+  tickets: (args, opts) => {
+    const mode = parseTicketsMode(args.mode)
+    if (!mode.ok) return mode
+    return listTickets(mode.value, opts.idsOnly ?? false)
+  },
   build: () => {
     const r = spawnSync('podman', ['build', '-t', 'ralph', ralphDir()], { stdio: 'inherit' })
     if (r.status !== 0) process.exit(r.status ?? 1)

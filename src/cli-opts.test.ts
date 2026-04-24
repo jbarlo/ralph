@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { pickScope, pickScopeFilter } from './cli-opts.js'
+import { pickScope, pickScopeFilter, parseTicketsMode } from './cli-opts.js'
 
 describe('pickScope', () => {
   it('returns the selected scope', () => {
@@ -41,6 +41,38 @@ describe('pickScopeFilter', () => {
       const r = pickScopeFilter(opts)
       expect(r.ok).toBe(false)
       if (!r.ok) expect(r.error).toMatch(/mutually exclusive/)
+    }
+  })
+})
+
+describe('parseTicketsMode', () => {
+  it('resolves canonical modes and aliases', () => {
+    expect(parseTicketsMode('pending')).toEqual({ ok: true, value: 'pending' })
+    expect(parseTicketsMode('p')).toEqual({ ok: true, value: 'pending' })
+    expect(parseTicketsMode('done')).toEqual({ ok: true, value: 'done' })
+    expect(parseTicketsMode('d')).toEqual({ ok: true, value: 'done' })
+    expect(parseTicketsMode('failed')).toEqual({ ok: true, value: 'failed' })
+    expect(parseTicketsMode('f')).toEqual({ ok: true, value: 'failed' })
+    expect(parseTicketsMode('draft')).toEqual({ ok: true, value: 'draft' })
+    expect(parseTicketsMode('dr')).toEqual({ ok: true, value: 'draft' })
+    expect(parseTicketsMode('all')).toEqual({ ok: true, value: 'all' })
+    expect(parseTicketsMode('a')).toEqual({ ok: true, value: 'all' })
+  })
+
+  it('defaults to pending when input is undefined', () => {
+    expect(parseTicketsMode(undefined)).toEqual({ ok: true, value: 'pending' })
+  })
+
+  it('is case-insensitive', () => {
+    expect(parseTicketsMode('DONE')).toEqual({ ok: true, value: 'done' })
+  })
+
+  it('returns err on unknown mode', () => {
+    const r = parseTicketsMode('bogus')
+    expect(r.ok).toBe(false)
+    if (!r.ok) {
+      expect(r.error).toMatch(/Unknown tickets mode: bogus/)
+      expect(r.exitCode).toBe(1)
     }
   })
 })
