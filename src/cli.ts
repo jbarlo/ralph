@@ -5,13 +5,15 @@ import { listTickets, parseMode } from './commands/tickets.js'
 import { initProject } from './commands/init.js'
 import { printOrchestrator } from './commands/orchestrator.js'
 import { listAll, listEvent, listNames, addHook, removeHook, isValidEvent, VALID_EVENTS } from './commands/hooks.js'
-import * as refs from './commands/refs.js'
+import { makeRefsCommands } from './commands/refs.js'
+import { pickScope, pickScopeFilter } from './cli-opts.js'
 import { runLoop } from './loop.js'
 import { runOnce } from './once.js'
 import { spawnSync } from 'node:child_process'
 import { ralphDir } from './ralph-dir.js'
 
 const completionsBuiltin = builtins.completions()
+const refsCmds = makeRefsCommands()
 
 const invalidEvent = (event: string) =>
   err(`Invalid event '${event}'. Valid: ${VALID_EVENTS.join(', ')}`, 1)
@@ -134,6 +136,13 @@ const cli = defineCLI({
         shadowed: {
           description: 'List project refs that shadow a same-name global ref',
         },
+        dir: {
+          description: 'Print the refs base directory (both scopes by default)',
+          options: {
+            global: { type: 'boolean', description: 'Only the global dir' },
+            project: { type: 'boolean', description: 'Only the project dir' },
+          },
+        },
       },
     },
     completions: completionsBuiltin.command,
@@ -185,12 +194,27 @@ cli.run(process.argv, {
     return ok(removeHook(args.event, args.name))
   },
   'refs.list': (_args, opts) => {
-    if (opts.namesOnly) return ok(refs.listNames())
-    return ok(refs.list(refs.pickScopeFilter(opts)))
+    if (opts.namesOnly) return refsCmds.listNames()
+    const filter = pickScopeFilter(opts)
+    if (!filter.ok) return filter
+    return refsCmds.list(filter.value)
   },
-  'refs.show': (args, opts) => ok(refs.show(args.name, refs.pickScope(opts))),
-  'refs.path': (args, opts) => ok(refs.refPath(args.name, refs.pickScope(opts))),
-  'refs.shadowed': () => ok(refs.shadowed()),
+  'refs.show': (args, opts) => {
+    const scope = pickScope(opts)
+    if (!scope.ok) return scope
+    return refsCmds.show(args.name, scope.value)
+  },
+  'refs.path': (args, opts) => {
+    const scope = pickScope(opts)
+    if (!scope.ok) return scope
+    return refsCmds.path(args.name, scope.value)
+  },
+  'refs.shadowed': () => refsCmds.shadowed(),
+  'refs.dir': (_args, opts) => {
+    const scope = pickScope(opts)
+    if (!scope.ok) return scope
+    return refsCmds.dir(scope.value)
+  },
   completions: (args) =>
     ok(cli.completion(args.shell as 'bash' | 'zsh' | 'fish')),
 })

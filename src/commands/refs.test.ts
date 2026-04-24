@@ -1,13 +1,14 @@
 import { describe, it, expect, afterEach, beforeEach } from 'vitest'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { list, listNames, show, refPath, shadowed, resolveRef, pickScope, pickScopeFilter } from './refs.js'
+import { makeRefsCommands, type RefsCommands } from './refs.js'
 import { tempDir } from '../test-helpers.js'
 
-describe('refs', () => {
+describe('refs commands', () => {
   const cleanupFns: (() => void)[] = []
   let projectDir: string
   let globalHome: string
+  let refs: RefsCommands
 
   beforeEach(() => {
     const p = tempDir()
@@ -18,6 +19,7 @@ describe('refs', () => {
     process.env.RALPH_GLOBAL_DIR = globalHome
     mkdirSync(join(projectDir, '.ralph/refs'), { recursive: true })
     mkdirSync(join(globalHome, 'refs'), { recursive: true })
+    refs = makeRefsCommands(projectDir)
   })
 
   afterEach(() => {
@@ -37,119 +39,147 @@ describe('refs', () => {
     writeFileSync(full, body)
   }
 
-  it('list merges with project precedence', () => {
-    writeGlobal('alpha', 'G:alpha')
-    writeGlobal('beta', 'G:beta')
-    writeProj('beta', 'P:beta')
-    writeProj('gamma', 'P:gamma')
+  const value = <T>(r: { ok: boolean; value?: T; error?: string }): T => {
+    if (!r.ok) throw new Error(`expected ok, got err: ${r.error}`)
+    return r.value as T
+  }
 
-    const out = list(undefined, projectDir)
-    expect(out).toBe(
+  // list
+
+  it('list merges with project precedence', () => {
+    writeGlobal('alpha', 'G')
+    writeGlobal('beta', 'G')
+    writeProj('beta', 'P')
+    writeProj('gamma', 'P')
+    expect(value(refs.list(undefined))).toBe(
       'alpha\t[global]\n' +
       'beta\t[project]\n' +
       'gamma\t[project]',
     )
   })
 
-  it('list --project and --global filter scopes', () => {
+  it('list filters by scope', () => {
     writeGlobal('alpha', 'G')
     writeProj('beta', 'P')
-    expect(list('project', projectDir)).toBe('beta')
-    expect(list('global', projectDir)).toBe('alpha')
+    expect(value(refs.list('project'))).toBe('beta')
+    expect(value(refs.list('global'))).toBe('alpha')
   })
 
-  it('list --all marks shadowed entries', () => {
+  it('list all marks shadowed entries', () => {
     writeGlobal('same', 'G')
     writeProj('same', 'P')
     writeGlobal('only-g', 'G')
     writeProj('only-p', 'P')
-    const out = list('all', projectDir)
-    expect(out).toBe(
+    expect(value(refs.list('all'))).toBe(
       'only-g\t[global]\n' +
       'only-p\t[project]\n' +
       'same\t[project] (shadows global)',
     )
   })
 
+  it('listNames dedupes across scopes', () => {
+    writeGlobal('alpha', 'G')
+    writeGlobal('beta', 'G')
+    writeProj('beta', 'P')
+    writeProj('gamma', 'P')
+    expect(value(refs.listNames())).toBe('alpha\nbeta\ngamma')
+  })
+
+  // show
+
   it('show returns project copy when both exist (precedence)', () => {
     writeGlobal('x', 'global body')
     writeProj('x', 'project body')
-    expect(show('x', undefined, projectDir)).toBe('project body')
+    expect(value(refs.show('x'))).toBe('project body')
   })
 
-  it('show --global forces global scope', () => {
+  it('show with scope forces that scope', () => {
     writeGlobal('x', 'global body')
     writeProj('x', 'project body')
-    expect(show('x', 'global', projectDir)).toBe('global body')
+    expect(value(refs.show('x', 'global'))).toBe('global body')
   })
 
-  it('show --project errors if missing in project', () => {
-    writeGlobal('x', 'global body')
-    expect(() => show('x', 'project', projectDir)).toThrow(/not found in project scope/)
+  it('show returns err when missing in forced scope', () => {
+    writeGlobal('x', 'G')
+    const r = refs.show('x', 'project')
+    expect(r.ok).toBe(false)
+    if (!r.ok) {
+      expect(r.error).toMatch(/not found in project scope/)
+      expect(r.exitCode).toBe(1)
+    }
   })
 
-  it('show strips single trailing newline', () => {
+  it('show returns err when missing in both scopes', () => {
+    const r = refs.show('nope')
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toMatch(/not found/)
+  })
+
+  it('show strips a single trailing newline', () => {
     writeProj('x', 'body\n')
-    expect(show('x', undefined, projectDir)).toBe('body')
+    expect(value(refs.show('x'))).toBe('body')
   })
 
-  it('path returns absolute path of resolved ref', () => {
+  // path
+
+  it('path returns the resolved absolute path', () => {
     writeProj('x', 'body')
-    expect(refPath('x', undefined, projectDir)).toBe(join(projectDir, '.ralph/refs/x.md'))
+    expect(value(refs.path('x'))).toBe(join(projectDir, '.ralph/refs/x.md'))
   })
 
-  it('nested dirs use posix-style path as name', () => {
-    writeProj('patterns/result-type', 'body')
-    expect(show('patterns/result-type', undefined, projectDir)).toBe('body')
-    expect(list('project', projectDir)).toBe('patterns/result-type')
+  it('path with scope forces that scope', () => {
+    writeGlobal('x', 'G')
+    writeProj('x', 'P')
+    expect(value(refs.path('x', 'global'))).toBe(join(globalHome, 'refs/x.md'))
+    expect(value(refs.path('x', 'project'))).toBe(join(projectDir, '.ralph/refs/x.md'))
   })
+
+  it('path returns err when missing in both scopes', () => {
+    const r = refs.path('nope')
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toMatch(/not found/)
+  })
+
+  // shadowed
 
   it('shadowed lists project refs that shadow a same-name global', () => {
     writeGlobal('a', 'G')
     writeGlobal('b', 'G')
     writeProj('a', 'P')
     writeProj('c', 'P')
-    expect(shadowed(projectDir)).toBe('a')
+    expect(value(refs.shadowed())).toBe('a')
   })
 
-  it('resolveRef throws when ref missing entirely', () => {
-    expect(() => resolveRef('nope', undefined, projectDir)).toThrow(/not found/)
+  // dir
+
+  it('dir prints both scopes by default, even when empty', () => {
+    expect(value(refs.dir())).toBe(
+      `project\t${join(projectDir, '.ralph/refs')}\n` +
+      `global\t${join(globalHome, 'refs')}`,
+    )
   })
 
-  it('path --global and --project force scope', () => {
-    writeGlobal('x', 'G')
-    writeProj('x', 'P')
-    expect(refPath('x', 'global', projectDir)).toBe(join(globalHome, 'refs/x.md'))
-    expect(refPath('x', 'project', projectDir)).toBe(join(projectDir, '.ralph/refs/x.md'))
+  it('dir with scope returns a single path', () => {
+    expect(value(refs.dir('global'))).toBe(join(globalHome, 'refs'))
+    expect(value(refs.dir('project'))).toBe(join(projectDir, '.ralph/refs'))
   })
 
-  it('path --project errors if missing in project', () => {
-    writeGlobal('x', 'G')
-    expect(() => refPath('x', 'project', projectDir)).toThrow(/not found in project scope/)
+  // empty state
+
+  it('returns empty string when no refs exist in either scope', () => {
+    expect(value(refs.list(undefined))).toBe('')
+    expect(value(refs.list('project'))).toBe('')
+    expect(value(refs.list('global'))).toBe('')
+    expect(value(refs.list('all'))).toBe('')
+    expect(value(refs.listNames())).toBe('')
+    expect(value(refs.shadowed())).toBe('')
   })
 
-  it('pickScope rejects --global + --project together', () => {
-    expect(() => pickScope({ global: true, project: true })).toThrow(/mutually exclusive/)
-    expect(pickScope({ global: true })).toBe('global')
-    expect(pickScope({ project: true })).toBe('project')
-    expect(pickScope({})).toBeUndefined()
-  })
+  // nested
 
-  it('pickScopeFilter rejects any two scope flags together', () => {
-    expect(() => pickScopeFilter({ global: true, project: true })).toThrow(/mutually exclusive/)
-    expect(() => pickScopeFilter({ global: true, all: true })).toThrow(/mutually exclusive/)
-    expect(() => pickScopeFilter({ project: true, all: true })).toThrow(/mutually exclusive/)
-    expect(pickScopeFilter({ all: true })).toBe('all')
-    expect(pickScopeFilter({ global: true })).toBe('global')
-    expect(pickScopeFilter({ project: true })).toBe('project')
-    expect(pickScopeFilter({})).toBeUndefined()
-  })
-
-  it('listNames dedupes across scopes for completions', () => {
-    writeGlobal('alpha', 'G')
-    writeGlobal('beta', 'G')
-    writeProj('beta', 'P')
-    writeProj('gamma', 'P')
-    expect(listNames(projectDir)).toBe('alpha\nbeta\ngamma')
+  it('nested dirs use posix-style path as name', () => {
+    writeProj('patterns/result-type', 'body')
+    expect(value(refs.show('patterns/result-type'))).toBe('body')
+    expect(value(refs.list('project'))).toBe('patterns/result-type')
   })
 })

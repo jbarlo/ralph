@@ -36,6 +36,7 @@ ralph loop [n]           # run up to n iterations (default 20)
 ralph orchestrator       # print planner instructions (pipe into outer claude session)
 ralph refs list          # list reference docs (project wins over global)
 ralph refs show <name>   # print a reference doc (use --global / --project to force scope)
+ralph refs dir           # print the refs base directories (scriptable with --global / --project)
 ```
 
 ## Reference docs

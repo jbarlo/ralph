@@ -1,27 +1,10 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { globalRefsDir, projectRefsDir } from '../refs-dir.js'
+import { ok, err, type Result } from '../lib/result.js'
 
 export type Scope = 'global' | 'project'
 export type ScopeFilter = Scope | 'all' | undefined
-
-export function pickScope(opts: { global?: boolean; project?: boolean }): Scope | undefined {
-  if (opts.global && opts.project) {
-    throw new Error('--global and --project are mutually exclusive')
-  }
-  if (opts.global) return 'global'
-  if (opts.project) return 'project'
-  return undefined
-}
-
-export function pickScopeFilter(opts: { global?: boolean; project?: boolean; all?: boolean }): ScopeFilter {
-  const flags = [opts.global, opts.project, opts.all].filter(Boolean).length
-  if (flags > 1) throw new Error('--global, --project, and --all are mutually exclusive')
-  if (opts.all) return 'all'
-  if (opts.global) return 'global'
-  if (opts.project) return 'project'
-  return undefined
-}
 
 function scopeDir(scope: Scope, cwd: string): string {
   return scope === 'global' ? globalRefsDir() : projectRefsDir(cwd)
@@ -56,71 +39,82 @@ function refsInDir(dir: string): Map<string, string> {
   return result
 }
 
-export function list(filter: ScopeFilter, cwd: string = process.cwd()): string {
-  const proj = refsInDir(projectRefsDir(cwd))
-  const glob = refsInDir(globalRefsDir())
-
-  if (filter === 'project') return formatNames(proj)
-  if (filter === 'global') return formatNames(glob)
-  if (filter === 'all') return formatAll(proj, glob)
-
-  const merged = new Map<string, Scope>()
-  for (const n of glob.keys()) merged.set(n, 'global')
-  for (const n of proj.keys()) merged.set(n, 'project')
-  const lines = [...merged.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([name, scope]) => `${name}\t[${scope}]`)
-  return lines.join('\n')
-}
-
-function formatNames(refs: Map<string, string>): string {
-  return [...refs.keys()].sort().join('\n')
-}
-
-function formatAll(proj: Map<string, string>, glob: Map<string, string>): string {
-  const names = new Set([...proj.keys(), ...glob.keys()])
-  const lines = [...names].sort().map(name => {
-    const inP = proj.has(name)
-    const inG = glob.has(name)
-    if (inP && inG) return `${name}\t[project] (shadows global)`
-    if (inP) return `${name}\t[project]`
-    return `${name}\t[global]`
-  })
-  return lines.join('\n')
-}
-
-export function listNames(cwd: string = process.cwd()): string {
-  const names = new Set<string>()
-  for (const n of refsInDir(projectRefsDir(cwd)).keys()) names.add(n)
-  for (const n of refsInDir(globalRefsDir()).keys()) names.add(n)
-  return [...names].sort().join('\n')
-}
-
-export function resolveRef(name: string, scope: Scope | undefined, cwd: string = process.cwd()): { path: string; scope: Scope } {
+function resolveRef(name: string, scope: Scope | undefined, cwd: string): Result<string, string> {
   if (scope) {
     const path = join(scopeDir(scope, cwd), `${name}.md`)
-    if (!existsSync(path)) throw new Error(`Ref '${name}' not found in ${scope} scope`)
-    return { path, scope }
+    if (!existsSync(path)) return err(`Ref '${name}' not found in ${scope} scope`, 1)
+    return ok(path)
   }
   const projPath = join(projectRefsDir(cwd), `${name}.md`)
-  if (existsSync(projPath)) return { path: projPath, scope: 'project' }
+  if (existsSync(projPath)) return ok(projPath)
   const globPath = join(globalRefsDir(), `${name}.md`)
-  if (existsSync(globPath)) return { path: globPath, scope: 'global' }
-  throw new Error(`Ref '${name}' not found`)
+  if (existsSync(globPath)) return ok(globPath)
+  return err(`Ref '${name}' not found`, 1)
 }
 
-export function show(name: string, scope: Scope | undefined, cwd: string = process.cwd()): string {
-  const { path } = resolveRef(name, scope, cwd)
-  return readFileSync(path, 'utf8').replace(/\n$/, '')
+function readRefFile(path: string): Result<string, string> {
+  try {
+    return ok(readFileSync(path, 'utf8').replace(/\n$/, ''))
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    return err(message, 1)
+  }
 }
 
-export function refPath(name: string, scope: Scope | undefined, cwd: string = process.cwd()): string {
-  return resolveRef(name, scope, cwd).path
+export type RefsCommands = {
+  list(filter: ScopeFilter): Result<string, string>
+  listNames(): Result<string, string>
+  show(name: string, scope?: Scope): Result<string, string>
+  path(name: string, scope?: Scope): Result<string, string>
+  shadowed(): Result<string, string>
+  dir(scope?: Scope): Result<string, string>
 }
 
-export function shadowed(cwd: string = process.cwd()): string {
-  const proj = refsInDir(projectRefsDir(cwd))
-  const glob = refsInDir(globalRefsDir())
-  const names = [...proj.keys()].filter(n => glob.has(n)).sort()
-  return names.join('\n')
+export function makeRefsCommands(cwd: string = process.cwd()): RefsCommands {
+  return {
+    list(filter) {
+      const proj = refsInDir(projectRefsDir(cwd))
+      const glob = refsInDir(globalRefsDir())
+      if (filter === 'project') return ok([...proj.keys()].sort().join('\n'))
+      if (filter === 'global') return ok([...glob.keys()].sort().join('\n'))
+      if (filter === 'all') {
+        const names = new Set([...proj.keys(), ...glob.keys()])
+        return ok([...names].sort().map(name => {
+          if (proj.has(name) && glob.has(name)) return `${name}\t[project] (shadows global)`
+          if (proj.has(name)) return `${name}\t[project]`
+          return `${name}\t[global]`
+        }).join('\n'))
+      }
+      const merged = new Map<string, Scope>()
+      for (const n of glob.keys()) merged.set(n, 'global')
+      for (const n of proj.keys()) merged.set(n, 'project')
+      return ok([...merged.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([name, scope]) => `${name}\t[${scope}]`)
+        .join('\n'))
+    },
+    listNames() {
+      const names = new Set<string>()
+      for (const n of refsInDir(projectRefsDir(cwd)).keys()) names.add(n)
+      for (const n of refsInDir(globalRefsDir()).keys()) names.add(n)
+      return ok([...names].sort().join('\n'))
+    },
+    show(name, scope) {
+      const resolved = resolveRef(name, scope, cwd)
+      if (!resolved.ok) return resolved
+      return readRefFile(resolved.value)
+    },
+    path(name, scope) {
+      return resolveRef(name, scope, cwd)
+    },
+    shadowed() {
+      const proj = refsInDir(projectRefsDir(cwd))
+      const glob = refsInDir(globalRefsDir())
+      return ok([...proj.keys()].filter(n => glob.has(n)).sort().join('\n'))
+    },
+    dir(scope) {
+      if (scope) return ok(scopeDir(scope, cwd))
+      return ok(`project\t${projectRefsDir(cwd)}\nglobal\t${globalRefsDir()}`)
+    },
+  }
 }
