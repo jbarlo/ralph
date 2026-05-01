@@ -44,7 +44,7 @@ ralph loop                                          # run all tickets
 - \`.ralph/tickets.json\`: task queue (edit directly or use \`ralph add\`)
 - \`.ralph/progress.txt\`: log of completed work
 - \`.ralph/hooks.d/\`: lifecycle hooks
-- \`RALPH.md\`: instructions for the executor (edit for project-specific guidance)
+- \`.ralph/refs/\`: project-specific reference docs the executor can read via \`ralph refs show <name>\` (drop conventions, runbooks, domain notes here)
 `
 
 export function printOrchestrator(): string {
