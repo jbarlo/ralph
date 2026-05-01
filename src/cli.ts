@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { defineCLI, ok, err, builtins } from 'jimkit-cli'
+import { defineCLI, ok, builtins } from 'jimkit-cli'
 import { addTicket } from './commands/add.js'
 import { listTickets } from './commands/tickets.js'
 import { initProject } from './commands/init.js'
@@ -9,8 +9,6 @@ import { makeRefsCommands } from './commands/refs.js'
 import { pickScope, pickScopeFilter, parseTicketsMode, parseHookEvent } from './cli-opts.js'
 import { runLoop } from './loop.js'
 import { runOnce } from './once.js'
-import { spawnSync } from 'node:child_process'
-import { ralphDir } from './ralph-dir.js'
 import { type Result } from './lib/result.js'
 
 const completionsBuiltin = builtins.completions()
@@ -77,9 +75,6 @@ const cli = defineCLI({
       options: {
         idsOnly: { type: 'boolean', description: 'Print only ticket IDs (for completions)' },
       },
-    },
-    build: {
-      description: 'Build the ralph container image',
     },
     hooks: {
       description: 'Manage lifecycle hooks',
@@ -179,10 +174,6 @@ cli.run(process.argv, {
     const mode = parseTicketsMode(args.mode)
     if (!mode.ok) return mode
     return listTickets(mode.value, opts.idsOnly ?? false)
-  },
-  build: () => {
-    const r = spawnSync('podman', ['build', '-t', 'ralph', ralphDir()], { stdio: 'inherit' })
-    return exitOnErr(r.status === 0 ? ok('') : err('', r.status ?? 1))
   },
   'hooks.list': (args, opts) => {
     if (opts.namesOnly) return hooksCmds.listNames()

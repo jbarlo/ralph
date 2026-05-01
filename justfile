@@ -8,9 +8,12 @@ default:
 build-cli:
     bun build src/cli.ts --compile --outfile ralph
 
-# Build the podman image
+# Build the CLI and podman image
 build: build-cli
-    ./ralph build
+    podman build -t ralph \
+      --build-arg AGENT_UID=$(id -u) \
+      --build-arg AGENT_GID=$(id -g) \
+      .
 
 # Run loop mode (all tickets until done)
 loop *args:
