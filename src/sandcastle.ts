@@ -1,8 +1,9 @@
 import { run, claudeCode } from '@ai-hero/sandcastle'
 import { podman } from '@ai-hero/sandcastle/sandboxes/podman'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { ralphDir } from './ralph-dir.js'
+import { globalRefsDir } from './refs-dir.js'
 
 const AUTH_COPY = [
   'mkdir -p /home/agent/.claude',
@@ -14,17 +15,25 @@ const AUTH_COPY = [
 export async function runRalphContainer(): Promise<number> {
   const prompt = readFileSync(join(ralphDir(), 'prompt.md'), 'utf8')
 
+  const globalRefs = globalRefsDir()
+  const mounts = [
+    { hostPath: '~/.claude', sandboxPath: '/claude-host', readonly: true },
+    { hostPath: '~/.claude.json', sandboxPath: '/claude-host.json', readonly: true },
+  ]
+  if (existsSync(globalRefs)) {
+    mounts.push({ hostPath: globalRefs, sandboxPath: '/ralph-global/refs', readonly: true })
+  }
+
   try {
     await run({
       agent: claudeCode('claude-opus-4-6'),
       sandbox: podman({
         imageName: 'ralph',
-        mounts: [
-          { hostPath: '~/.claude', sandboxPath: '/claude-host', readonly: true },
-          { hostPath: '~/.claude.json', sandboxPath: '/claude-host.json', readonly: true },
-        ],
+        mounts,
         env: {
           NIX_STATE_DIR: '/home/agent/.nix-state',
+          RALPH_GLOBAL_DIR: '/ralph-global',
+          RALPH_IN_SANDBOX: '1',
         },
       }),
       prompt,

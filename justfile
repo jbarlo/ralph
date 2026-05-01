@@ -9,7 +9,7 @@ build-cli:
     bun build src/cli.ts --compile --outfile ralph
 
 # Build the podman image
-build:
+build: build-cli
     ./ralph build
 
 # Run loop mode (all tickets until done)

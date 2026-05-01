@@ -85,6 +85,19 @@ Use conventional commits:
 - `.ralph/tickets.json` - Your task list (update status when starting/done)
 - `.ralph/progress.txt` - Append-only log of what you've done
 
+## Ralph CLI
+
+The `ralph` command is on PATH inside this sandbox. Useful subcommands:
+
+- `ralph tickets [pending|done|failed|draft|all]` - list tickets
+- `ralph refs list` - list available reference docs (project + global, project shadows global)
+- `ralph refs show <name>` - print a ref to stdout
+- `ralph refs list --tag <tag>` - filter refs by frontmatter tag
+
+Refs are curated context (conventions, runbooks, domain notes). Consult `ralph refs list` early — if a ref looks relevant to the current ticket, read it before diving in.
+
+`ralph loop` and `ralph once` are disabled inside the sandbox; do not try to nest.
+
 ## Exit Behavior
 
 Exit normally when you have:

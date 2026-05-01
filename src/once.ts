@@ -8,6 +8,7 @@ import { readProgressSummary } from './progress.js'
 import { ok, err, type Result } from './lib/result.js'
 
 export async function runOnce(): Promise<Result<string, string>> {
+  if (process.env.RALPH_IN_SANDBOX) return err('cannot nest ralph inside sandbox', 1)
   if (!inGitRepo()) return err('ralph must run inside a git repository', 1)
 
   const state = resolveState()

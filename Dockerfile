@@ -45,6 +45,12 @@ RUN mkdir -p $PLAYWRIGHT_BROWSERS_PATH && npx playwright install chromium
 COPY claude-wrapper.sh /usr/local/bin/claude
 RUN chmod +x /usr/local/bin/claude
 
+# ralph CLI itself, so the agent can use `ralph refs`, `ralph tickets`, etc.
+# Dockerfile is intentionally NOT shipped alongside — `ralph loop`/`once`
+# locate it via ralphDir(), so those subcommands cannot recurse from inside.
+COPY ralph /usr/local/bin/ralph
+RUN chmod +x /usr/local/bin/ralph
+
 # Open /nix for runtime use by any uid. No sticky bit: nix needs to replace
 # cached store entries (unlink + create), which the sticky bit would block
 # for non-owners. Acceptable in an ephemeral container sandbox.
