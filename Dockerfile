@@ -1,5 +1,11 @@
 FROM docker.io/debian:bookworm-slim
 
+# Match the host uid/gid of whoever runs `ralph build`, so podman's
+# --userns=keep-id maps host user → container `agent` cleanly. Defaults to
+# 1000/1000; overridden by `ralph build` via --build-arg.
+ARG AGENT_UID=1000
+ARG AGENT_GID=1000
+
 # System deps + Playwright Chromium runtime deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl xz-utils git bash ca-certificates \
@@ -8,28 +14,29 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
-# Dedicated user for the nix install. Runtime uid differs; the store is made
-# world-accessible further down so any uid can use + extend it.
-RUN useradd -m -u 1500 nixer && \
-    mkdir -m 1777 /nix && chown nixer /nix
+# Agent user matches host uid/gid so podman's --userns=keep-id maps the host
+# user 1:1 to this user inside the container. Nix is installed as agent so
+# /nix is owned by the runtime user from the start — no retroactive chmod.
+RUN (getent group $AGENT_GID || groupadd -g $AGENT_GID agent) && \
+    useradd -m -u $AGENT_UID -g $AGENT_GID agent && \
+    mkdir /nix && chown agent:$AGENT_GID /nix
 
-USER nixer
-ENV USER=nixer HOME=/home/nixer
+USER agent
+ENV USER=agent HOME=/home/agent
 RUN curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
 
-# Global nix config so runtime users (any uid) see flakes enabled.
+# Global nix config so flakes are enabled.
 USER root
 RUN mkdir -p /etc/nix && \
     echo "experimental-features = nix-command flakes" > /etc/nix/nix.conf
 
-USER nixer
-
 # Node is needed to bootstrap the global claude-code install.
-RUN . /home/nixer/.nix-profile/etc/profile.d/nix.sh && \
+USER agent
+RUN . /home/agent/.nix-profile/etc/profile.d/nix.sh && \
     nix-env -iA nixpkgs.nodejs_22
 
 USER root
-ENV PATH="/home/nixer/.nix-profile/bin:/usr/local/bin:/usr/bin:/bin"
+ENV PATH="/home/agent/.nix-profile/bin:/usr/local/bin:/usr/bin:/bin"
 
 # Install claude-code to /opt and expose as claude-real; the wrapper below
 # occupies /usr/local/bin/claude.
@@ -51,20 +58,10 @@ RUN chmod +x /usr/local/bin/claude
 COPY ralph /usr/local/bin/ralph
 RUN chmod +x /usr/local/bin/ralph
 
-# Open /nix for runtime use by any uid. No sticky bit: nix needs to replace
-# cached store entries (unlink + create), which the sticky bit would block
-# for non-owners. Acceptable in an ephemeral container sandbox.
-RUN chmod -R a+rwX /nix
+RUN mkdir -p /home/agent/workspace && chown agent:$AGENT_GID /home/agent/workspace
 
-# Agent user at uid 1000 so podman's --userns=keep-id maps host uid 1000 to
-# this user inside the container (HOME is genuinely owned by runtime user).
-USER root
-RUN /usr/sbin/useradd -m -u 1000 -U agent && \
-    mkdir -p /home/agent/workspace && \
-    chown -R agent:agent /home/agent
-
-# Redirect nix per-user state into HOME so nix doesn't try to chmod
-# /nix/var/nix/profiles/per-user (which it doesn't own at runtime).
+# Redirect nix per-user state into HOME so nix doesn't try to write to
+# /nix/var/nix/profiles/per-user across container restarts.
 ENV NIX_STATE_DIR=/home/agent/.nix-state
 
 WORKDIR /home/agent/workspace
