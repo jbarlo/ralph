@@ -1,4 +1,4 @@
-import { resolveState } from '../state.js'
+import { requireProject } from '../state.js'
 import { readTickets, writeTickets, nextId } from '../tickets.js'
 import { ok, type Result } from '../lib/result.js'
 
@@ -8,7 +8,9 @@ export function addTicket(
   description: string,
   cwd?: string,
 ): Result<string, string> {
-  const { tickets: path } = resolveState(cwd)
+  const stateR = requireProject(cwd)
+  if (!stateR.ok) return stateR
+  const { tickets: path } = stateR.value
   const file = readTickets(path)
   if (!file.ok) return file
   const id = nextId(file.value)

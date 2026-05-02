@@ -1,6 +1,6 @@
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { resolveState } from './state.js'
+import { requireProject } from './state.js'
 import { readTickets, pickNext } from './tickets.js'
 import { runRalphContainer } from './sandcastle.js'
 import { inGitRepo, currentCommit, checkpointCommit } from './git.js'
@@ -14,7 +14,9 @@ export async function runOnce(log = false): Promise<Result<string, string>> {
   if (process.env.RALPH_IN_SANDBOX) return err('cannot nest ralph inside sandbox', 1)
   if (!inGitRepo()) return err('ralph must run inside a git repository', 1)
 
-  const state = resolveState()
+  const stateR = requireProject()
+  if (!stateR.ok) return stateR
+  const state = stateR.value
   const beforeR = readTickets(state.tickets)
   if (!beforeR.ok) return beforeR
   const beforeTicket = pickNext(beforeR.value)

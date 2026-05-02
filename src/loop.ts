@@ -1,6 +1,6 @@
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { resolveState } from './state.js'
+import { requireProject } from './state.js'
 import { readTickets, pickNext, remaining } from './tickets.js'
 import { runRalphContainer } from './sandcastle.js'
 import { inGitRepo, currentCommit, checkpointCommit } from './git.js'
@@ -20,7 +20,9 @@ export async function runLoop(maxIter: number, log = false): Promise<Result<stri
     console.log('')
     console.log(`=== Iteration ${i}/${maxIter} ===`)
 
-    const state = resolveState()
+    const stateR = requireProject()
+    if (!stateR.ok) return stateR
+    const state = stateR.value
     const fileR = readTickets(state.tickets)
     if (!fileR.ok) return fileR
 
