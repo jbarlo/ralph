@@ -119,3 +119,15 @@ Append-only log of completed work. Each iteration adds to this file.
 - Tests: state.test.ts updated for logsDir, new log-path.test.ts (3 tests), init.test.ts updated for logs dir
 - All 68 tests pass, typecheck passes
 - Files changed: src/state.ts, src/sandcastle.ts, src/cli.ts, src/loop.ts, src/once.ts, src/log-path.ts (new), src/log-path.test.ts (new), src/commands/init.ts, src/commands/init.test.ts, src/state.test.ts
+
+## Ticket #14: Walk up from cwd to find .ralph project root (git-style)
+- Added `findRalphRoot(cwd)` to state.ts — walks parent directories to find nearest `.ralph/`, honors `RALPH_PROJECT_DIR` env override
+- `resolveState(cwd)` now uses `findRalphRoot` with fallback to cwd (so init still works from fresh dirs)
+- Added `requireProject(cwd)` returning `Result<StatePaths, string>` — errors with clear message when no `.ralph/` found
+- Updated loop.ts, once.ts, commands/tickets.ts, commands/add.ts to use `requireProject` for validation
+- Updated refs-dir.ts `projectRefsDir` to use `findRalphRoot` so refs resolve from subdirs
+- hooks-dispatch.ts and commands/hooks.ts use `resolveState` which now walks up automatically
+- StatePaths now includes `root` field with the discovered project root path
+- Tests: 10 new tests covering findRalphRoot (cwd, parent, not found, env override, nested), requireProject (ok, error, walk-up), resolveState (paths, root field)
+- All 77 tests pass, typecheck passes
+- Files changed: src/state.ts, src/state.test.ts, src/loop.ts, src/once.ts, src/commands/tickets.ts, src/commands/add.ts, src/refs-dir.ts
