@@ -15,9 +15,10 @@ build: build-cli && prewarm
       --build-arg AGENT_GID=$(id -g) \
       .
 
-# Pre-warm keep-id layer cache so the first real run isn't a slow id-map copy
+# Pre-warm keep-id layer cache so the first real run isn't a slow id-map copy.
+# Must match the --user sandcastle uses or the id-map cache key differs.
 prewarm:
-    podman run --rm --userns=keep-id ralph true
+    podman run --rm --userns=keep-id --user $(id -u):$(id -g) ralph true
 
 # Clean up busy overlay mounts left by an interrupted keep-id run
 unstick:
