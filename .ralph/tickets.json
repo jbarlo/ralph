@@ -76,7 +76,20 @@
       "description": "Create a file called test.md in the project root with the content '# Smoke Test\nThis file was created by ralph as a smoke test.' Then commit it. This is a throwaway ticket to verify the pipeline works.",
       "status": "completed",
       "priority": 1
+    },
+    {
+      "id": 12,
+      "title": "Use sandcastle RunResult for structured commit handling",
+      "description": "Currently src/sandcastle.ts ignores RunResult from sandcastle.run(). Sandcastle exposes: RunResult.commits (SHAs the agent made), RunResult.preservedWorktreePath (set when agent finished but left uncommitted changes), RunResult.completionSignal, branchStrategy: 'merge-to-head' (squashes iteration to single commit). Idea: prompt agent to emit '<commit>feat: msg\\n\\nbody</commit>' as completion signal; ralph parses it and either uses sandcastle's squash-merge or reshapes commits into one well-formed conventional commit per ticket. Also detect preservedWorktreePath case (agent forgot to commit changes) and either auto-commit or surface to user. Goal: clean git history per ticket instead of N feat+chore commits.",
+      "status": "draft",
+      "priority": 30
+    },
+    {
+      "id": 13,
+      "title": "Add --log flag to write iteration logs to .ralph/logs/",
+      "description": "Sandcastle supports two logging modes via 'logging' option (see node_modules/@ai-hero/sandcastle/dist/run.d.ts: LoggingOption): { type: 'stdout' } (interactive TUI, current default in src/sandcastle.ts:43) or { type: 'file', path: string } (writes agent + iteration progress to a log file). Today ralph hardcodes stdout, so headless/background runs lose detailed agent output once the TUI scrolls or terminal closes.\n\nGOAL: opt-in --log flag on 'ralph loop' and 'ralph once' that drains sandcastle output to per-iteration log files under .ralph/logs/.\n\nSCOPE:\n1. cli.ts: add boolean option 'log' to both 'loop' and 'once' command definitions. Thread the value through the command handlers.\n2. state.ts: add 'logsDir: join(root, \"logs\")' to StatePaths and resolveState() (keeps log path derivation alongside other state paths).\n3. sandcastle.ts: change runRalphContainer signature to accept { logFile?: string }. When logFile set, use logging: { type: 'file', path: logFile }; otherwise keep current stdout mode.\n4. loop.ts / once.ts: when --log is set, mkdir -p state.logsDir, build a per-iteration filename, pass to runRalphContainer. Print 'Logging iteration N to: <path>' to stdout before invoking so user can 'tail -f'.\n5. Filename pattern: '<ISO-timestamp>-iter<N>-ticket<ID>.log' for loop; '<ISO-timestamp>-ticket<ID>.log' for once. Keeps logs sortable + identifiable.\n6. ralph init: add '.ralph/logs/' to the generated .gitignore (or whatever it currently writes for .ralph/) so logs don't get committed by accident. Verify init.ts doesn't already exclude them.\n7. Tests:\n   - state.test.ts: assert resolveState includes logsDir\n   - loop / once: small unit covering log-path construction; full integration not needed\n   - hooks-payloads / dispatch unaffected\n\nNON-GOALS:\n- Don't change the default; --log stays opt-in. Interactive devs keep the TUI.\n- Don't expose the rest of LoggingOption (sandcastle's default 'file' would auto-place under .sandcastle/logs/ — we want .ralph/logs/ so it's colocated with tickets/progress).\n\nVERIFY:\n- 'ralph once --log' creates .ralph/logs/<ts>-ticket<ID>.log with the agent's full output\n- 'ralph loop 3 --log' creates 3 separate files\n- Without --log: behavior unchanged, TUI renders as today\n- bun run typecheck && bun vitest run pass\n\nREFS:\n- node_modules/@ai-hero/sandcastle/dist/run.d.ts — LoggingOption + RunResult.logFilePath\n- src/sandcastle.ts:43 — current hardcoded { type: 'stdout' }\n- src/loop.ts:35, src/once.ts:21 — runRalphContainer call sites",
+      "status": "completed",
+      "priority": 20
     }
   ]
 }
-
