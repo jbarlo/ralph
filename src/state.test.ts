@@ -1,20 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
-import { resolveState, findRalphRoot, requireProject } from './state.js'
+import { statePathsFromRoot, findRalphRoot, requireProject } from './state.js'
 
-describe('resolveState', () => {
-  it('returns .ralph/ paths', () => {
-    const state = resolveState('/tmp/fake')
+describe('statePathsFromRoot', () => {
+  it('returns .ralph/ paths under the given root', () => {
+    const state = statePathsFromRoot('/tmp/fake')
+    expect(state.root).toBe('/tmp/fake')
     expect(state.tickets).toBe(join('/tmp/fake', '.ralph/tickets.json'))
     expect(state.progress).toBe(join('/tmp/fake', '.ralph/progress.txt'))
     expect(state.hooksDir).toBe(join('/tmp/fake', '.ralph/hooks.d'))
     expect(state.logsDir).toBe(join('/tmp/fake', '.ralph/logs'))
-  })
-
-  it('includes root in returned paths', () => {
-    const state = resolveState('/tmp/fake')
-    expect(state.root).toBe('/tmp/fake')
   })
 })
 

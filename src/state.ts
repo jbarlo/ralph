@@ -1,5 +1,5 @@
 import { existsSync, realpathSync } from 'node:fs'
-import { join, dirname, parse as parsePath } from 'node:path'
+import { join, dirname } from 'node:path'
 import { ok, err, type Result } from './lib/result.js'
 
 export type StatePaths = {
@@ -28,20 +28,25 @@ export function findRalphRoot(cwd: string): string | undefined {
   }
 }
 
-export function resolveState(cwd: string = process.cwd()): StatePaths {
-  const projectRoot = findRalphRoot(cwd) ?? cwd
-  const root = join(projectRoot, '.ralph')
+/**
+ * Build StatePaths from an already-known project root. Caller is responsible
+ * for having found the root via requireProject (the canonical entry point for
+ * "find a project from cwd"). Don't call this with a raw cwd to bypass the
+ * project check — that's how root-finding logic gets reached around.
+ */
+export function statePathsFromRoot(root: string): StatePaths {
+  const dotRalph = join(root, '.ralph')
   return {
-    root: projectRoot,
-    tickets: join(root, 'tickets.json'),
-    progress: join(root, 'progress.txt'),
-    hooksDir: join(root, 'hooks.d'),
-    logsDir: join(root, 'logs'),
+    root,
+    tickets: join(dotRalph, 'tickets.json'),
+    progress: join(dotRalph, 'progress.txt'),
+    hooksDir: join(dotRalph, 'hooks.d'),
+    logsDir: join(dotRalph, 'logs'),
   }
 }
 
 export function requireProject(cwd: string = process.cwd()): Result<StatePaths, string> {
   const projectRoot = findRalphRoot(cwd)
   if (!projectRoot) return err('not in a ralph project (no .ralph/ in any parent)', 1)
-  return ok(resolveState(projectRoot))
+  return ok(statePathsFromRoot(projectRoot))
 }

@@ -56,12 +56,12 @@ describe('hooks commands', () => {
     }
   })
 
-  it('list shows the directory-not-found state when hooks.d/<event> is missing', () => {
+  it('list errors when run outside a ralph project', () => {
     const fresh = tempDir()
     cleanupFns.push(fresh.cleanup)
     const r = makeHooksCommands(fresh.path).list('on-start')
-    expect(r.ok).toBe(true)
-    if (r.ok) expect(r.value).toContain('(directory not found)')
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toMatch(/not in a ralph project/)
   })
 
   // add
@@ -84,13 +84,13 @@ describe('hooks commands', () => {
     if (!r.ok) expect(r.error).toMatch(/not found/)
   })
 
-  it('add returns err when the hooks.d/<event>/ directory is missing (no ralph init)', () => {
+  it('add errors when run outside a ralph project', () => {
     const fresh = tempDir()
     cleanupFns.push(fresh.cleanup)
     const script = writeScript('a.sh')
     const r = makeHooksCommands(fresh.path).add('on-start', script)
     expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.error).toMatch(/Run 'ralph init' first/)
+    if (!r.ok) expect(r.error).toMatch(/not in a ralph project/)
   })
 
   it('add returns err when a hook of the same name already exists', () => {

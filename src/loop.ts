@@ -35,7 +35,7 @@ export async function runLoop(maxIter: number, log = false): Promise<Result<stri
     const beforeTicket = pickNext(fileR.value)
     const beforeId = beforeTicket?.id
 
-    dispatchEvent('on-start', startPayload(beforeTicket))
+    dispatchEvent('on-start', startPayload(beforeTicket), state)
 
     let logFile: string | undefined
     if (log) {
@@ -55,9 +55,9 @@ export async function runLoop(maxIter: number, log = false): Promise<Result<stri
     if (exit === 0 && afterTicket?.status === 'completed') {
       const summaryR = readProgressSummary(state.progress)
       if (!summaryR.ok) return summaryR
-      dispatchEvent('on-complete', completePayload(afterTicket, summaryR.value, commit))
+      dispatchEvent('on-complete', completePayload(afterTicket, summaryR.value, commit), state)
     } else if (beforeId != null) {
-      dispatchEvent('on-error', errorPayload(afterTicket ?? beforeTicket, exit, commit))
+      dispatchEvent('on-error', errorPayload(afterTicket ?? beforeTicket, exit, commit), state)
     }
   }
 

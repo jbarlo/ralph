@@ -22,7 +22,7 @@ export async function runOnce(log = false): Promise<Result<string, string>> {
   const beforeTicket = pickNext(beforeR.value)
   const beforeId = beforeTicket?.id
 
-  dispatchEvent('on-start', startPayload(beforeTicket))
+  dispatchEvent('on-start', startPayload(beforeTicket), state)
 
   let logFile: string | undefined
   if (log) {
@@ -42,9 +42,9 @@ export async function runOnce(log = false): Promise<Result<string, string>> {
   if (exit === 0 && afterTicket?.status === 'completed') {
     const summaryR = readProgressSummary(state.progress)
     if (!summaryR.ok) return summaryR
-    dispatchEvent('on-complete', completePayload(afterTicket, summaryR.value, commit))
+    dispatchEvent('on-complete', completePayload(afterTicket, summaryR.value, commit), state)
   } else if (beforeId != null) {
-    dispatchEvent('on-error', errorPayload(afterTicket ?? beforeTicket, exit, commit))
+    dispatchEvent('on-error', errorPayload(afterTicket ?? beforeTicket, exit, commit), state)
   }
 
   if (exit !== 0) return err('', exit)

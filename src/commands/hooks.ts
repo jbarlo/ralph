@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, lstatSync, readlinkSync, symlinkSync, unlinkSync, chmodSync, statSync, type Stats } from 'node:fs'
 import { resolve, basename, join } from 'node:path'
-import { resolveState } from '../state.js'
+import { requireProject } from '../state.js'
 import { ok, err, type Result } from '../lib/result.js'
 
 export const VALID_EVENTS = ['on-start', 'on-complete', 'on-error'] as const
@@ -14,7 +14,11 @@ export type HooksCommands = {
 }
 
 export function makeHooksCommands(cwd?: string): HooksCommands {
-  const eventDir = (event: HookEvent) => join(resolveState(cwd).hooksDir, event)
+  const eventDir = (event: HookEvent): Result<string, string> => {
+    const stateR = requireProject(cwd)
+    if (!stateR.ok) return stateR
+    return ok(join(stateR.value.hooksDir, event))
+  }
 
   const formatEntry = (dir: string, name: string): Result<string, string> => {
     const full = join(dir, name)
@@ -31,7 +35,9 @@ export function makeHooksCommands(cwd?: string): HooksCommands {
   }
 
   const listOneEvent = (event: HookEvent): Result<string, string> => {
-    const dir = eventDir(event)
+    const dirR = eventDir(event)
+    if (!dirR.ok) return dirR
+    const dir = dirR.value
     const lines = [`${event}:`]
     if (!existsSync(dir)) {
       lines.push('  (directory not found)')
@@ -67,7 +73,9 @@ export function makeHooksCommands(cwd?: string): HooksCommands {
     listNames() {
       const names = new Set<string>()
       for (const ev of VALID_EVENTS) {
-        const dir = eventDir(ev)
+        const dirR = eventDir(ev)
+        if (!dirR.ok) return dirR
+        const dir = dirR.value
         if (!existsSync(dir)) continue
         const entries = safeReaddir(dir)
         if (!entries.ok) return entries
@@ -81,7 +89,9 @@ export function makeHooksCommands(cwd?: string): HooksCommands {
       if (!exists.ok) return err(`Script '${script}' not found`, 1)
       if (!exists.value.isFile()) return err(`Script '${script}' is not a regular file`, 1)
 
-      const dir = eventDir(event)
+      const dirR = eventDir(event)
+      if (!dirR.ok) return dirR
+      const dir = dirR.value
       if (!existsSync(dir)) return err(`${dir} directory not found. Run 'ralph init' first.`, 1)
 
       const absScript = resolve(script)
@@ -97,7 +107,9 @@ export function makeHooksCommands(cwd?: string): HooksCommands {
     },
 
     remove(event, name) {
-      const target = join(eventDir(event), name)
+      const dirR = eventDir(event)
+      if (!dirR.ok) return dirR
+      const target = join(dirR.value, name)
       if (!existsSync(target)) return err(`Hook '${name}' not found in ${event}`, 1)
       const r = safeUnlink(target)
       if (!r.ok) return r

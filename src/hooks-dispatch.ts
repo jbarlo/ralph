@@ -2,13 +2,13 @@ import { existsSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync }
 import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { resolveState } from './state.js'
+import { type StatePaths } from './state.js'
 import { VALID_EVENTS, type HookEvent } from './commands/hooks.js'
 
 type DispatchResult = { event: HookEvent; failed: string[] }
 
-export function dispatchEvent(event: HookEvent, payload: unknown, cwd?: string): DispatchResult {
-  const dir = join(resolveState(cwd).hooksDir, event)
+export function dispatchEvent(event: HookEvent, payload: unknown, state: StatePaths): DispatchResult {
+  const dir = join(state.hooksDir, event)
   if (!existsSync(dir)) return { event, failed: [] }
 
   const failed: string[] = []

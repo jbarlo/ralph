@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { dispatchEvent } from './hooks-dispatch.js'
+import { statePathsFromRoot } from './state.js'
 import { tempDir } from './test-helpers.js'
 
 describe('dispatchEvent', () => {
@@ -35,7 +36,7 @@ stdin=$(cat)
     chmodSync(hookScript, 0o755)
 
     const payload = { event: 'complete', ticket: { id: 42, title: 'probe' } }
-    const result = dispatchEvent('on-complete', payload, path)
+    const result = dispatchEvent('on-complete', payload, statePathsFromRoot(path))
 
     expect(result.failed).toEqual([])
     const lines = readFileSync(outputFile, 'utf8').trimEnd().split('\n')
@@ -63,7 +64,7 @@ stdin=$(cat)
     chmodSync(failScript, 0o755)
     chmodSync(passScript, 0o755)
 
-    const result = dispatchEvent('on-error', { event: 'error' }, path)
+    const result = dispatchEvent('on-error', { event: 'error' }, statePathsFromRoot(path))
 
     expect(result.failed).toEqual(['01-fail.sh'])
     expect(existsSync(marker)).toBe(true)
