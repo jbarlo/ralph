@@ -38,6 +38,7 @@ export function initProject(cwd: string = process.cwd()): Result<InitMessage[], 
     () => ensureFile(cwd, 'flake.nix', FLAKE_TEMPLATE),
     () => ensureProgress(cwd),
     () => ensureHooks(cwd),
+    () => ensureLogs(cwd),
   ]) {
     const r = step()
     if (!r.ok) return r
@@ -80,6 +81,16 @@ function ensureHooks(cwd: string): Result<InitMessage, string> {
     if (!gk.ok) return gk
   }
   return ok({ path: '.ralph/hooks.d/ (on-start, on-complete, on-error)', created: true })
+}
+
+function ensureLogs(cwd: string): Result<InitMessage, string> {
+  const dotLogs = join(cwd, '.ralph/logs')
+  if (existsSync(dotLogs)) return ok({ path: '.ralph/logs/', created: false })
+  const mk = safeMkdir(dotLogs, { recursive: true })
+  if (!mk.ok) return mk
+  const gi = safeWriteFile(join(dotLogs, '.gitignore'), '*\n!.gitignore\n')
+  if (!gi.ok) return gi
+  return ok({ path: '.ralph/logs/', created: true })
 }
 
 function ensureFile(cwd: string, name: string, content: string): Result<InitMessage, string> {

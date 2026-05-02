@@ -47,9 +47,15 @@ const cli = defineCLI({
       args: {
         maxIter: { type: 'number', description: 'Maximum iterations (default 20)' },
       },
+      options: {
+        log: { type: 'boolean', description: 'Write iteration logs to .ralph/logs/' },
+      },
     },
     once: {
       description: 'Run one ticket, then stop',
+      options: {
+        log: { type: 'boolean', description: 'Write iteration log to .ralph/logs/' },
+      },
     },
     init: {
       description: 'Scaffold .ralph/ state directory in current project',
@@ -156,8 +162,8 @@ const cli = defineCLI({
 })
 
 cli.run(process.argv, {
-  loop: async (args) => exitOnErr(await runLoop(args.maxIter ?? 20)),
-  once: async () => exitOnErr(await runOnce()),
+  loop: async (args, opts) => exitOnErr(await runLoop(args.maxIter ?? 20, opts.log ?? false)),
+  once: async (_args, opts) => exitOnErr(await runOnce(opts.log ?? false)),
   init: () => {
     const r = initProject()
     if (!r.ok) return r

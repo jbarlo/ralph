@@ -8,5 +8,6 @@ describe('resolveState', () => {
     expect(state.tickets).toBe(join('/tmp/fake', '.ralph/tickets.json'))
     expect(state.progress).toBe(join('/tmp/fake', '.ralph/progress.txt'))
     expect(state.hooksDir).toBe(join('/tmp/fake', '.ralph/hooks.d'))
+    expect(state.logsDir).toBe(join('/tmp/fake', '.ralph/logs'))
   })
 })

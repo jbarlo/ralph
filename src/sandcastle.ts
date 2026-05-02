@@ -12,7 +12,11 @@ const AUTH_COPY = [
   'true',
 ].join('; ')
 
-export async function runRalphContainer(): Promise<number> {
+export type RunOptions = {
+  logFile?: string
+}
+
+export async function runRalphContainer(opts: RunOptions = {}): Promise<number> {
   const prompt = readFileSync(join(ralphDir(), 'prompt.md'), 'utf8')
 
   const globalRefs = globalRefsDir()
@@ -40,7 +44,7 @@ export async function runRalphContainer(): Promise<number> {
       hooks: {
         onSandboxReady: [{ command: AUTH_COPY }],
       },
-      logging: { type: 'stdout' },
+      logging: opts.logFile ? { type: 'file', path: opts.logFile } : { type: 'stdout' },
     })
     return 0
   } catch (e) {

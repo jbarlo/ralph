@@ -1,3 +1,5 @@
+import { mkdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { resolveState } from './state.js'
 import { readTickets, pickNext, remaining } from './tickets.js'
 import { runRalphContainer } from './sandcastle.js'
@@ -6,8 +8,9 @@ import { dispatchEvent } from './hooks-dispatch.js'
 import { startPayload, completePayload, errorPayload } from './hooks-payloads.js'
 import { readProgressSummary } from './progress.js'
 import { ok, err, type Result } from './lib/result.js'
+import { buildLogFilename } from './log-path.js'
 
-export async function runLoop(maxIter: number): Promise<Result<string, string>> {
+export async function runLoop(maxIter: number, log = false): Promise<Result<string, string>> {
   if (process.env.RALPH_IN_SANDBOX) return err('cannot nest ralph inside sandbox', 1)
   if (!inGitRepo()) return err('ralph must run inside a git repository', 1)
 
@@ -32,7 +35,14 @@ export async function runLoop(maxIter: number): Promise<Result<string, string>> 
 
     dispatchEvent('on-start', startPayload(beforeTicket))
 
-    const exit = await runRalphContainer()
+    let logFile: string | undefined
+    if (log) {
+      mkdirSync(state.logsDir, { recursive: true })
+      logFile = join(state.logsDir, buildLogFilename({ iteration: i, ticketId: beforeId }))
+      console.log(`Logging iteration ${i} to: ${logFile}`)
+    }
+
+    const exit = await runRalphContainer({ logFile })
     checkpointCommit()
 
     const afterR = readTickets(state.tickets)
